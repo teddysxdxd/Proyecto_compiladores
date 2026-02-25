@@ -85,6 +85,14 @@ class CalculadoraParser ( Parser ):
         def getRuleIndex(self):
             return CalculadoraParser.RULE_archivo
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterArchivo" ):
+                listener.enterArchivo(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitArchivo" ):
+                listener.exitArchivo(self)
+
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitArchivo" ):
                 return visitor.visitArchivo(self)
@@ -141,6 +149,14 @@ class CalculadoraParser ( Parser ):
         def getRuleIndex(self):
             return CalculadoraParser.RULE_instruccion
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterInstruccion" ):
+                listener.enterInstruccion(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitInstruccion" ):
+                listener.exitInstruccion(self)
+
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInstruccion" ):
                 return visitor.visitInstruccion(self)
@@ -194,6 +210,14 @@ class CalculadoraParser ( Parser ):
         def NUMERO(self):
             return self.getToken(CalculadoraParser.NUMERO, 0)
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterNumero" ):
+                listener.enterNumero(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitNumero" ):
+                listener.exitNumero(self)
+
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNumero" ):
                 return visitor.visitNumero(self)
@@ -210,6 +234,14 @@ class CalculadoraParser ( Parser ):
         def expresion(self):
             return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,0)
 
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterParentesis" ):
+                listener.enterParentesis(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitParentesis" ):
+                listener.exitParentesis(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitParentesis" ):
@@ -232,6 +264,14 @@ class CalculadoraParser ( Parser ):
                 return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,i)
 
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterMultiplicacionDivisision" ):
+                listener.enterMultiplicacionDivisision(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitMultiplicacionDivisision" ):
+                listener.exitMultiplicacionDivisision(self)
+
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMultiplicacionDivisision" ):
                 return visitor.visitMultiplicacionDivisision(self)
@@ -252,6 +292,14 @@ class CalculadoraParser ( Parser ):
             else:
                 return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,i)
 
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterSumaResta" ):
+                listener.enterSumaResta(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitSumaResta" ):
+                listener.exitSumaResta(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSumaResta" ):
