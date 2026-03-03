@@ -35,12 +35,12 @@ class EvaluarVisitante(CalculadoraVisitor):
         
         operador = ctx.op.text
         
-        if operador == '==': return 1 if izq == der else 0
-        if operador == '!=' or operador == '<>': return 1 if izq != der else 0
-        if operador == '<': return 1 if izq < der else 0
-        if operador == '>': return 1 if izq > der else 0
-        if operador == '<=': return 1 if izq <= der else 0
-        if operador == '>=': return 1 if izq >= der else 0
+        if operador == '==': return "verdadero" if izq == der else "falso"
+        if operador == '!=' or operador == '<>': return "verdadero" if izq != der else "falso"
+        if operador == '<': return "verdadero" if izq < der else "falso"
+        if operador == '>': return "verdadero" if izq > der else "falso"
+        if operador == '<=': return "verdadero" if izq <= der else "falso"
+        if operador == '>=': return "verdadero" if izq >= der else "falso"
         return 0
 
 def main():
