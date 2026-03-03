@@ -19,6 +19,11 @@ class CalculadoraVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by CalculadoraParser#AndOrLogico.
+    def visitAndOrLogico(self, ctx:CalculadoraParser.AndOrLogicoContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by CalculadoraParser#Numero.
     def visitNumero(self, ctx:CalculadoraParser.NumeroContext):
         return self.visitChildren(ctx)
@@ -31,6 +36,11 @@ class CalculadoraVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CalculadoraParser#Parentesis.
     def visitParentesis(self, ctx:CalculadoraParser.ParentesisContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CalculadoraParser#NotLogico.
+    def visitNotLogico(self, ctx:CalculadoraParser.NotLogicoContext):
         return self.visitChildren(ctx)
 
 

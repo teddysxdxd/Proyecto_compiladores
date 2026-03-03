@@ -10,19 +10,21 @@ else:
 
 def serializedATN():
     return [
-        4,1,16,39,2,0,7,0,2,1,7,1,2,2,7,2,1,0,4,0,8,8,0,11,0,12,0,9,1,0,
-        1,0,1,1,1,1,1,1,1,2,1,2,1,2,1,2,1,2,1,2,3,2,23,8,2,1,2,1,2,1,2,1,
-        2,1,2,1,2,1,2,1,2,1,2,5,2,34,8,2,10,2,12,2,37,9,2,1,2,0,1,4,3,0,
-        2,4,0,3,1,0,3,4,1,0,5,6,1,0,7,13,40,0,7,1,0,0,0,2,13,1,0,0,0,4,22,
-        1,0,0,0,6,8,3,2,1,0,7,6,1,0,0,0,8,9,1,0,0,0,9,7,1,0,0,0,9,10,1,0,
-        0,0,10,11,1,0,0,0,11,12,5,0,0,1,12,1,1,0,0,0,13,14,3,4,2,0,14,15,
-        5,15,0,0,15,3,1,0,0,0,16,17,6,2,-1,0,17,18,5,1,0,0,18,19,3,4,2,0,
-        19,20,5,2,0,0,20,23,1,0,0,0,21,23,5,14,0,0,22,16,1,0,0,0,22,21,1,
-        0,0,0,23,35,1,0,0,0,24,25,10,3,0,0,25,26,7,0,0,0,26,34,3,4,2,4,27,
-        28,10,2,0,0,28,29,7,1,0,0,29,34,3,4,2,3,30,31,10,1,0,0,31,32,7,2,
-        0,0,32,34,3,4,2,2,33,24,1,0,0,0,33,27,1,0,0,0,33,30,1,0,0,0,34,37,
-        1,0,0,0,35,33,1,0,0,0,35,36,1,0,0,0,36,5,1,0,0,0,37,35,1,0,0,0,4,
-        9,22,33,35
+        4,1,19,44,2,0,7,0,2,1,7,1,2,2,7,2,1,0,4,0,8,8,0,11,0,12,0,9,1,0,
+        1,0,1,1,1,1,1,1,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,3,2,25,8,2,1,2,1,
+        2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,5,2,39,8,2,10,2,12,2,42,
+        9,2,1,2,0,1,4,3,0,2,4,0,4,1,0,4,5,1,0,6,7,1,0,8,14,1,0,15,16,47,
+        0,7,1,0,0,0,2,13,1,0,0,0,4,24,1,0,0,0,6,8,3,2,1,0,7,6,1,0,0,0,8,
+        9,1,0,0,0,9,7,1,0,0,0,9,10,1,0,0,0,10,11,1,0,0,0,11,12,5,0,0,1,12,
+        1,1,0,0,0,13,14,3,4,2,0,14,15,5,18,0,0,15,3,1,0,0,0,16,17,6,2,-1,
+        0,17,18,5,1,0,0,18,19,3,4,2,0,19,20,5,2,0,0,20,25,1,0,0,0,21,25,
+        5,17,0,0,22,23,5,3,0,0,23,25,3,4,2,5,24,16,1,0,0,0,24,21,1,0,0,0,
+        24,22,1,0,0,0,25,40,1,0,0,0,26,27,10,4,0,0,27,28,7,0,0,0,28,39,3,
+        4,2,5,29,30,10,3,0,0,30,31,7,1,0,0,31,39,3,4,2,4,32,33,10,2,0,0,
+        33,34,7,2,0,0,34,39,3,4,2,3,35,36,10,1,0,0,36,37,7,3,0,0,37,39,3,
+        4,2,2,38,26,1,0,0,0,38,29,1,0,0,0,38,32,1,0,0,0,38,35,1,0,0,0,39,
+        42,1,0,0,0,40,38,1,0,0,0,40,41,1,0,0,0,41,5,1,0,0,0,42,40,1,0,0,
+        0,4,9,24,38,40
     ]
 
 class CalculadoraParser ( Parser ):
@@ -35,13 +37,15 @@ class CalculadoraParser ( Parser ):
 
     sharedContextCache = PredictionContextCache()
 
-    literalNames = [ "<INVALID>", "'('", "')'", "'*'", "'/'", "'+'", "'-'", 
-                     "'=='", "'!='", "'<>'", "'<'", "'>'", "'<='", "'>='" ]
+    literalNames = [ "<INVALID>", "'('", "')'", "'!'", "'*'", "'/'", "'+'", 
+                     "'-'", "'=='", "'!='", "'<>'", "'<'", "'>'", "'<='", 
+                     "'>='", "'&&'", "'||'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "NUMERO", "NEWLINE", "WS" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "<INVALID>", "NUMERO", "NEWLINE", "WS" ]
 
     RULE_archivo = 0
     RULE_instruccion = 1
@@ -63,9 +67,12 @@ class CalculadoraParser ( Parser ):
     T__10=11
     T__11=12
     T__12=13
-    NUMERO=14
-    NEWLINE=15
-    WS=16
+    T__13=14
+    T__14=15
+    T__15=16
+    NUMERO=17
+    NEWLINE=18
+    WS=19
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -129,7 +136,7 @@ class CalculadoraParser ( Parser ):
                 self.state = 9 
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
-                if not (_la==1 or _la==14):
+                if not ((((_la) & ~0x3f) == 0 and ((1 << _la) & 131082) != 0)):
                     break
 
             self.state = 11
@@ -212,6 +219,35 @@ class CalculadoraParser ( Parser ):
             super().copyFrom(ctx)
 
 
+    class AndOrLogicoContext(ExpresionContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CalculadoraParser.ExpresionContext
+            super().__init__(parser)
+            self.op = None # Token
+            self.copyFrom(ctx)
+
+        def expresion(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(CalculadoraParser.ExpresionContext)
+            else:
+                return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,i)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterAndOrLogico" ):
+                listener.enterAndOrLogico(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitAndOrLogico" ):
+                listener.exitAndOrLogico(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitAndOrLogico" ):
+                return visitor.visitAndOrLogico(self)
+            else:
+                return visitor.visitChildren(self)
+
+
     class NumeroContext(ExpresionContext):
 
         def __init__(self, parser, ctx:ParserRuleContext): # actually a CalculadoraParser.ExpresionContext
@@ -290,6 +326,31 @@ class CalculadoraParser ( Parser ):
                 return visitor.visitChildren(self)
 
 
+    class NotLogicoContext(ExpresionContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CalculadoraParser.ExpresionContext
+            super().__init__(parser)
+            self.copyFrom(ctx)
+
+        def expresion(self):
+            return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,0)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterNotLogico" ):
+                listener.enterNotLogico(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitNotLogico" ):
+                listener.exitNotLogico(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitNotLogico" ):
+                return visitor.visitNotLogico(self)
+            else:
+                return visitor.visitChildren(self)
+
+
     class MultiplicacionDivisisionContext(ExpresionContext):
 
         def __init__(self, parser, ctx:ParserRuleContext): # actually a CalculadoraParser.ExpresionContext
@@ -359,7 +420,7 @@ class CalculadoraParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 22
+            self.state = 24
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [1]:
@@ -374,18 +435,27 @@ class CalculadoraParser ( Parser ):
                 self.state = 19
                 self.match(CalculadoraParser.T__1)
                 pass
-            elif token in [14]:
+            elif token in [17]:
                 localctx = CalculadoraParser.NumeroContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
                 self.state = 21
                 self.match(CalculadoraParser.NUMERO)
                 pass
+            elif token in [3]:
+                localctx = CalculadoraParser.NotLogicoContext(self, localctx)
+                self._ctx = localctx
+                _prevctx = localctx
+                self.state = 22
+                self.match(CalculadoraParser.T__2)
+                self.state = 23
+                self.expresion(5)
+                pass
             else:
                 raise NoViableAltException(self)
 
             self._ctx.stop = self._input.LT(-1)
-            self.state = 35
+            self.state = 40
             self._errHandler.sync(self)
             _alt = self._interp.adaptivePredict(self._input,3,self._ctx)
             while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
@@ -393,68 +463,87 @@ class CalculadoraParser ( Parser ):
                     if self._parseListeners is not None:
                         self.triggerExitRuleEvent()
                     _prevctx = localctx
-                    self.state = 33
+                    self.state = 38
                     self._errHandler.sync(self)
                     la_ = self._interp.adaptivePredict(self._input,2,self._ctx)
                     if la_ == 1:
                         localctx = CalculadoraParser.MultiplicacionDivisisionContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
-                        self.state = 24
-                        if not self.precpred(self._ctx, 3):
+                        self.state = 26
+                        if not self.precpred(self._ctx, 4):
                             from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 3)")
-                        self.state = 25
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 4)")
+                        self.state = 27
                         localctx.op = self._input.LT(1)
                         _la = self._input.LA(1)
-                        if not(_la==3 or _la==4):
+                        if not(_la==4 or _la==5):
                             localctx.op = self._errHandler.recoverInline(self)
                         else:
                             self._errHandler.reportMatch(self)
                             self.consume()
-                        self.state = 26
-                        self.expresion(4)
+                        self.state = 28
+                        self.expresion(5)
                         pass
 
                     elif la_ == 2:
                         localctx = CalculadoraParser.SumaRestaContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
-                        self.state = 27
-                        if not self.precpred(self._ctx, 2):
+                        self.state = 29
+                        if not self.precpred(self._ctx, 3):
                             from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 2)")
-                        self.state = 28
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 3)")
+                        self.state = 30
                         localctx.op = self._input.LT(1)
                         _la = self._input.LA(1)
-                        if not(_la==5 or _la==6):
+                        if not(_la==6 or _la==7):
                             localctx.op = self._errHandler.recoverInline(self)
                         else:
                             self._errHandler.reportMatch(self)
                             self.consume()
-                        self.state = 29
-                        self.expresion(3)
+                        self.state = 31
+                        self.expresion(4)
                         pass
 
                     elif la_ == 3:
                         localctx = CalculadoraParser.RelacionalContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
-                        self.state = 30
-                        if not self.precpred(self._ctx, 1):
+                        self.state = 32
+                        if not self.precpred(self._ctx, 2):
                             from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 1)")
-                        self.state = 31
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 2)")
+                        self.state = 33
                         localctx.op = self._input.LT(1)
                         _la = self._input.LA(1)
-                        if not((((_la) & ~0x3f) == 0 and ((1 << _la) & 16256) != 0)):
+                        if not((((_la) & ~0x3f) == 0 and ((1 << _la) & 32512) != 0)):
                             localctx.op = self._errHandler.recoverInline(self)
                         else:
                             self._errHandler.reportMatch(self)
                             self.consume()
-                        self.state = 32
+                        self.state = 34
+                        self.expresion(3)
+                        pass
+
+                    elif la_ == 4:
+                        localctx = CalculadoraParser.AndOrLogicoContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
+                        self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
+                        self.state = 35
+                        if not self.precpred(self._ctx, 1):
+                            from antlr4.error.Errors import FailedPredicateException
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 1)")
+                        self.state = 36
+                        localctx.op = self._input.LT(1)
+                        _la = self._input.LA(1)
+                        if not(_la==15 or _la==16):
+                            localctx.op = self._errHandler.recoverInline(self)
+                        else:
+                            self._errHandler.reportMatch(self)
+                            self.consume()
+                        self.state = 37
                         self.expresion(2)
                         pass
 
              
-                self.state = 37
+                self.state = 42
                 self._errHandler.sync(self)
                 _alt = self._interp.adaptivePredict(self._input,3,self._ctx)
 
@@ -480,14 +569,18 @@ class CalculadoraParser ( Parser ):
 
     def expresion_sempred(self, localctx:ExpresionContext, predIndex:int):
             if predIndex == 0:
-                return self.precpred(self._ctx, 3)
+                return self.precpred(self._ctx, 4)
          
 
             if predIndex == 1:
-                return self.precpred(self._ctx, 2)
+                return self.precpred(self._ctx, 3)
          
 
             if predIndex == 2:
+                return self.precpred(self._ctx, 2)
+         
+
+            if predIndex == 3:
                 return self.precpred(self._ctx, 1)
          
 

@@ -26,6 +26,15 @@ class CalculadoraListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CalculadoraParser#AndOrLogico.
+    def enterAndOrLogico(self, ctx:CalculadoraParser.AndOrLogicoContext):
+        pass
+
+    # Exit a parse tree produced by CalculadoraParser#AndOrLogico.
+    def exitAndOrLogico(self, ctx:CalculadoraParser.AndOrLogicoContext):
+        pass
+
+
     # Enter a parse tree produced by CalculadoraParser#Numero.
     def enterNumero(self, ctx:CalculadoraParser.NumeroContext):
         pass
@@ -50,6 +59,15 @@ class CalculadoraListener(ParseTreeListener):
 
     # Exit a parse tree produced by CalculadoraParser#Parentesis.
     def exitParentesis(self, ctx:CalculadoraParser.ParentesisContext):
+        pass
+
+
+    # Enter a parse tree produced by CalculadoraParser#NotLogico.
+    def enterNotLogico(self, ctx:CalculadoraParser.NotLogicoContext):
+        pass
+
+    # Exit a parse tree produced by CalculadoraParser#NotLogico.
+    def exitNotLogico(self, ctx:CalculadoraParser.NotLogicoContext):
         pass
 
 
