@@ -28,6 +28,20 @@ class EvaluarVisitante(CalculadoraVisitor):
     def visitInstruccion(self, ctx):
         # Visitamos la expresión dentro de la instrucción y la retornamos
         return self.visit(ctx.expresion())
+    
+    def visitRelacional(self, ctx):
+        izq = self.visit(ctx.expresion(0))
+        der = self.visit(ctx.expresion(1))
+        
+        operador = ctx.op.text
+        
+        if operador == '==': return 1 if izq == der else 0
+        if operador == '!=' or operador == '<>': return 1 if izq != der else 0
+        if operador == '<': return 1 if izq < der else 0
+        if operador == '>': return 1 if izq > der else 0
+        if operador == '<=': return 1 if izq <= der else 0
+        if operador == '>=': return 1 if izq >= der else 0
+        return 0
 
 def main():
     # Asegúrate de que el archivo existe

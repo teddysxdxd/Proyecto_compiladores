@@ -10,17 +10,19 @@ else:
 
 def serializedATN():
     return [
-        4,1,9,36,2,0,7,0,2,1,7,1,2,2,7,2,1,0,4,0,8,8,0,11,0,12,0,9,1,0,1,
-        0,1,1,1,1,1,1,1,2,1,2,1,2,1,2,1,2,1,2,3,2,23,8,2,1,2,1,2,1,2,1,2,
-        1,2,1,2,5,2,31,8,2,10,2,12,2,34,9,2,1,2,0,1,4,3,0,2,4,0,2,1,0,1,
-        2,1,0,3,4,36,0,7,1,0,0,0,2,13,1,0,0,0,4,22,1,0,0,0,6,8,3,2,1,0,7,
-        6,1,0,0,0,8,9,1,0,0,0,9,7,1,0,0,0,9,10,1,0,0,0,10,11,1,0,0,0,11,
-        12,5,0,0,1,12,1,1,0,0,0,13,14,3,4,2,0,14,15,5,8,0,0,15,3,1,0,0,0,
-        16,17,6,2,-1,0,17,23,5,7,0,0,18,19,5,5,0,0,19,20,3,4,2,0,20,21,5,
-        6,0,0,21,23,1,0,0,0,22,16,1,0,0,0,22,18,1,0,0,0,23,32,1,0,0,0,24,
-        25,10,4,0,0,25,26,7,0,0,0,26,31,3,4,2,5,27,28,10,3,0,0,28,29,7,1,
-        0,0,29,31,3,4,2,4,30,24,1,0,0,0,30,27,1,0,0,0,31,34,1,0,0,0,32,30,
-        1,0,0,0,32,33,1,0,0,0,33,5,1,0,0,0,34,32,1,0,0,0,4,9,22,30,32
+        4,1,16,39,2,0,7,0,2,1,7,1,2,2,7,2,1,0,4,0,8,8,0,11,0,12,0,9,1,0,
+        1,0,1,1,1,1,1,1,1,2,1,2,1,2,1,2,1,2,1,2,3,2,23,8,2,1,2,1,2,1,2,1,
+        2,1,2,1,2,1,2,1,2,1,2,5,2,34,8,2,10,2,12,2,37,9,2,1,2,0,1,4,3,0,
+        2,4,0,3,1,0,3,4,1,0,5,6,1,0,7,13,40,0,7,1,0,0,0,2,13,1,0,0,0,4,22,
+        1,0,0,0,6,8,3,2,1,0,7,6,1,0,0,0,8,9,1,0,0,0,9,7,1,0,0,0,9,10,1,0,
+        0,0,10,11,1,0,0,0,11,12,5,0,0,1,12,1,1,0,0,0,13,14,3,4,2,0,14,15,
+        5,15,0,0,15,3,1,0,0,0,16,17,6,2,-1,0,17,18,5,1,0,0,18,19,3,4,2,0,
+        19,20,5,2,0,0,20,23,1,0,0,0,21,23,5,14,0,0,22,16,1,0,0,0,22,21,1,
+        0,0,0,23,35,1,0,0,0,24,25,10,3,0,0,25,26,7,0,0,0,26,34,3,4,2,4,27,
+        28,10,2,0,0,28,29,7,1,0,0,29,34,3,4,2,3,30,31,10,1,0,0,31,32,7,2,
+        0,0,32,34,3,4,2,2,33,24,1,0,0,0,33,27,1,0,0,0,33,30,1,0,0,0,34,37,
+        1,0,0,0,35,33,1,0,0,0,35,36,1,0,0,0,36,5,1,0,0,0,37,35,1,0,0,0,4,
+        9,22,33,35
     ]
 
 class CalculadoraParser ( Parser ):
@@ -33,11 +35,13 @@ class CalculadoraParser ( Parser ):
 
     sharedContextCache = PredictionContextCache()
 
-    literalNames = [ "<INVALID>", "'*'", "'/'", "'+'", "'-'", "'('", "')'" ]
+    literalNames = [ "<INVALID>", "'('", "')'", "'*'", "'/'", "'+'", "'-'", 
+                     "'=='", "'!='", "'<>'", "'<'", "'>'", "'<='", "'>='" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "<INVALID>", "NUMERO", "NEWLINE", 
-                      "WS" ]
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
+                      "<INVALID>", "<INVALID>", "NUMERO", "NEWLINE", "WS" ]
 
     RULE_archivo = 0
     RULE_instruccion = 1
@@ -52,9 +56,16 @@ class CalculadoraParser ( Parser ):
     T__3=4
     T__4=5
     T__5=6
-    NUMERO=7
-    NEWLINE=8
-    WS=9
+    T__6=7
+    T__7=8
+    T__8=9
+    T__9=10
+    T__10=11
+    T__11=12
+    T__12=13
+    NUMERO=14
+    NEWLINE=15
+    WS=16
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -85,6 +96,14 @@ class CalculadoraParser ( Parser ):
         def getRuleIndex(self):
             return CalculadoraParser.RULE_archivo
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterArchivo" ):
+                listener.enterArchivo(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitArchivo" ):
+                listener.exitArchivo(self)
+
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitArchivo" ):
                 return visitor.visitArchivo(self)
@@ -110,7 +129,7 @@ class CalculadoraParser ( Parser ):
                 self.state = 9 
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
-                if not (_la==5 or _la==7):
+                if not (_la==1 or _la==14):
                     break
 
             self.state = 11
@@ -140,6 +159,14 @@ class CalculadoraParser ( Parser ):
 
         def getRuleIndex(self):
             return CalculadoraParser.RULE_instruccion
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterInstruccion" ):
+                listener.enterInstruccion(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitInstruccion" ):
+                listener.exitInstruccion(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitInstruccion" ):
@@ -194,9 +221,46 @@ class CalculadoraParser ( Parser ):
         def NUMERO(self):
             return self.getToken(CalculadoraParser.NUMERO, 0)
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterNumero" ):
+                listener.enterNumero(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitNumero" ):
+                listener.exitNumero(self)
+
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitNumero" ):
                 return visitor.visitNumero(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+    class RelacionalContext(ExpresionContext):
+
+        def __init__(self, parser, ctx:ParserRuleContext): # actually a CalculadoraParser.ExpresionContext
+            super().__init__(parser)
+            self.op = None # Token
+            self.copyFrom(ctx)
+
+        def expresion(self, i:int=None):
+            if i is None:
+                return self.getTypedRuleContexts(CalculadoraParser.ExpresionContext)
+            else:
+                return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,i)
+
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterRelacional" ):
+                listener.enterRelacional(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitRelacional" ):
+                listener.exitRelacional(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitRelacional" ):
+                return visitor.visitRelacional(self)
             else:
                 return visitor.visitChildren(self)
 
@@ -210,6 +274,14 @@ class CalculadoraParser ( Parser ):
         def expresion(self):
             return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,0)
 
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterParentesis" ):
+                listener.enterParentesis(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitParentesis" ):
+                listener.exitParentesis(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitParentesis" ):
@@ -232,6 +304,14 @@ class CalculadoraParser ( Parser ):
                 return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,i)
 
 
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterMultiplicacionDivisision" ):
+                listener.enterMultiplicacionDivisision(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitMultiplicacionDivisision" ):
+                listener.exitMultiplicacionDivisision(self)
+
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitMultiplicacionDivisision" ):
                 return visitor.visitMultiplicacionDivisision(self)
@@ -252,6 +332,14 @@ class CalculadoraParser ( Parser ):
             else:
                 return self.getTypedRuleContext(CalculadoraParser.ExpresionContext,i)
 
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterSumaResta" ):
+                listener.enterSumaResta(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitSumaResta" ):
+                listener.exitSumaResta(self)
 
         def accept(self, visitor:ParseTreeVisitor):
             if hasattr( visitor, "visitSumaResta" ):
@@ -274,30 +362,30 @@ class CalculadoraParser ( Parser ):
             self.state = 22
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [7]:
-                localctx = CalculadoraParser.NumeroContext(self, localctx)
+            if token in [1]:
+                localctx = CalculadoraParser.ParentesisContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
 
                 self.state = 17
-                self.match(CalculadoraParser.NUMERO)
+                self.match(CalculadoraParser.T__0)
+                self.state = 18
+                self.expresion(0)
+                self.state = 19
+                self.match(CalculadoraParser.T__1)
                 pass
-            elif token in [5]:
-                localctx = CalculadoraParser.ParentesisContext(self, localctx)
+            elif token in [14]:
+                localctx = CalculadoraParser.NumeroContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
-                self.state = 18
-                self.match(CalculadoraParser.T__4)
-                self.state = 19
-                self.expresion(0)
-                self.state = 20
-                self.match(CalculadoraParser.T__5)
+                self.state = 21
+                self.match(CalculadoraParser.NUMERO)
                 pass
             else:
                 raise NoViableAltException(self)
 
             self._ctx.stop = self._input.LT(-1)
-            self.state = 32
+            self.state = 35
             self._errHandler.sync(self)
             _alt = self._interp.adaptivePredict(self._input,3,self._ctx)
             while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
@@ -305,36 +393,17 @@ class CalculadoraParser ( Parser ):
                     if self._parseListeners is not None:
                         self.triggerExitRuleEvent()
                     _prevctx = localctx
-                    self.state = 30
+                    self.state = 33
                     self._errHandler.sync(self)
                     la_ = self._interp.adaptivePredict(self._input,2,self._ctx)
                     if la_ == 1:
                         localctx = CalculadoraParser.MultiplicacionDivisisionContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
                         self.state = 24
-                        if not self.precpred(self._ctx, 4):
-                            from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 4)")
-                        self.state = 25
-                        localctx.op = self._input.LT(1)
-                        _la = self._input.LA(1)
-                        if not(_la==1 or _la==2):
-                            localctx.op = self._errHandler.recoverInline(self)
-                        else:
-                            self._errHandler.reportMatch(self)
-                            self.consume()
-                        self.state = 26
-                        self.expresion(5)
-                        pass
-
-                    elif la_ == 2:
-                        localctx = CalculadoraParser.SumaRestaContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
-                        self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
-                        self.state = 27
                         if not self.precpred(self._ctx, 3):
                             from antlr4.error.Errors import FailedPredicateException
                             raise FailedPredicateException(self, "self.precpred(self._ctx, 3)")
-                        self.state = 28
+                        self.state = 25
                         localctx.op = self._input.LT(1)
                         _la = self._input.LA(1)
                         if not(_la==3 or _la==4):
@@ -342,12 +411,50 @@ class CalculadoraParser ( Parser ):
                         else:
                             self._errHandler.reportMatch(self)
                             self.consume()
-                        self.state = 29
+                        self.state = 26
                         self.expresion(4)
                         pass
 
+                    elif la_ == 2:
+                        localctx = CalculadoraParser.SumaRestaContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
+                        self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
+                        self.state = 27
+                        if not self.precpred(self._ctx, 2):
+                            from antlr4.error.Errors import FailedPredicateException
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 2)")
+                        self.state = 28
+                        localctx.op = self._input.LT(1)
+                        _la = self._input.LA(1)
+                        if not(_la==5 or _la==6):
+                            localctx.op = self._errHandler.recoverInline(self)
+                        else:
+                            self._errHandler.reportMatch(self)
+                            self.consume()
+                        self.state = 29
+                        self.expresion(3)
+                        pass
+
+                    elif la_ == 3:
+                        localctx = CalculadoraParser.RelacionalContext(self, CalculadoraParser.ExpresionContext(self, _parentctx, _parentState))
+                        self.pushNewRecursionContext(localctx, _startState, self.RULE_expresion)
+                        self.state = 30
+                        if not self.precpred(self._ctx, 1):
+                            from antlr4.error.Errors import FailedPredicateException
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 1)")
+                        self.state = 31
+                        localctx.op = self._input.LT(1)
+                        _la = self._input.LA(1)
+                        if not((((_la) & ~0x3f) == 0 and ((1 << _la) & 16256) != 0)):
+                            localctx.op = self._errHandler.recoverInline(self)
+                        else:
+                            self._errHandler.reportMatch(self)
+                            self.consume()
+                        self.state = 32
+                        self.expresion(2)
+                        pass
+
              
-                self.state = 34
+                self.state = 37
                 self._errHandler.sync(self)
                 _alt = self._interp.adaptivePredict(self._input,3,self._ctx)
 
@@ -373,11 +480,15 @@ class CalculadoraParser ( Parser ):
 
     def expresion_sempred(self, localctx:ExpresionContext, predIndex:int):
             if predIndex == 0:
-                return self.precpred(self._ctx, 4)
+                return self.precpred(self._ctx, 3)
          
 
             if predIndex == 1:
-                return self.precpred(self._ctx, 3)
+                return self.precpred(self._ctx, 2)
+         
+
+            if predIndex == 2:
+                return self.precpred(self._ctx, 1)
          
 
 

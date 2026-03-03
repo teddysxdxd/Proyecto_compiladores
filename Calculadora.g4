@@ -4,10 +4,11 @@ grammar Calculadora;
 archivo : instruccion+ EOF ;
 instruccion : expresion NEWLINE ;
 
-expresion : expresion op=('*'|'/') expresion   # MultiplicacionDivisision
+expresion : '(' expresion ')'                 # Parentesis
+          | NUMERO                            # Numero
+          | expresion op=('*'|'/') expresion  # MultiplicacionDivisision
           | expresion op=('+'|'-') expresion   # SumaResta
-          | NUMERO                             # Numero
-          | '(' expresion ')'                  # Parentesis
+          | expresion op=('=='|'!='|'<>'|'<'|'>'|'<='|'>=') expresion # Relacional
           ;
 
 // Reglas del Lexer

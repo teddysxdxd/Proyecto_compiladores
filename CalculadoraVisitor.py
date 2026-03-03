@@ -24,6 +24,11 @@ class CalculadoraVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by CalculadoraParser#Relacional.
+    def visitRelacional(self, ctx:CalculadoraParser.RelacionalContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by CalculadoraParser#Parentesis.
     def visitParentesis(self, ctx:CalculadoraParser.ParentesisContext):
         return self.visitChildren(ctx)
