@@ -9,7 +9,7 @@ expresion : '(' expresion ')'                 # Parentesis
           | expresion op=('*'|'/') expresion  # MultiplicacionDivisision
           | expresion op=('+'|'-') expresion   # SumaResta
           | expresion op=('=='|'!='|'<>'|'<'|'>'|'<='|'>=') expresion # Relacional
-          | expresion op=('&&'|'||'|'!')
+          | expresion op=('&&'|'||'|'!') expresion # operadores logicos xd
           ;
 
 // Reglas del Lexer
