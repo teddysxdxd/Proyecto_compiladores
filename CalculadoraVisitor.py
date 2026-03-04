@@ -14,8 +14,33 @@ class CalculadoraVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CalculadoraParser#instruccion.
-    def visitInstruccion(self, ctx:CalculadoraParser.InstruccionContext):
+    # Visit a parse tree produced by CalculadoraParser#InstruccionExpresion.
+    def visitInstruccionExpresion(self, ctx:CalculadoraParser.InstruccionExpresionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CalculadoraParser#printStmt.
+    def visitPrintStmt(self, ctx:CalculadoraParser.PrintStmtContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CalculadoraParser#InstruccionIf.
+    def visitInstruccionIf(self, ctx:CalculadoraParser.InstruccionIfContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CalculadoraParser#InstruccionBloque.
+    def visitInstruccionBloque(self, ctx:CalculadoraParser.InstruccionBloqueContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CalculadoraParser#block.
+    def visitBlock(self, ctx:CalculadoraParser.BlockContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CalculadoraParser#ifStatement.
+    def visitIfStatement(self, ctx:CalculadoraParser.IfStatementContext):
         return self.visitChildren(ctx)
 
 
@@ -36,6 +61,11 @@ class CalculadoraVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CalculadoraParser#Parentesis.
     def visitParentesis(self, ctx:CalculadoraParser.ParentesisContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CalculadoraParser#Cadena.
+    def visitCadena(self, ctx:CalculadoraParser.CadenaContext):
         return self.visitChildren(ctx)
 
 
