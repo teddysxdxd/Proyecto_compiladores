@@ -4,6 +4,7 @@ grammar Calculadora;
 archivo : (instruccion | NEWLINE)* EOF ;
 
 instruccion : expresion                    # InstruccionExpresion
+            | ID '=' expresion             # Asignacion
             | 'print' '(' expresion ')'    # printStmt
             | ifStatement                  # InstruccionIf
             | block                        # InstruccionBloque
@@ -17,8 +18,10 @@ ifStatement : 'simon' '(' expresion ')' block ('sinel' block)? ;
 
 // Jerarquía de expresiones (de mayor a menor precedencia)
 expresion : '(' expresion ')'                 # Parentesis
+          | '[' expresion ']'                 # Corchetes
           | NUMERO                            # Numero
           | STRING                            # Cadena
+          | ID                                # Variable
           | '!' expresion                     # NotLogico
           | expresion op=('*'|'/') expresion  # MultiplicacionDivisision
           | expresion op=('+'|'-') expresion   # SumaResta
@@ -31,3 +34,4 @@ NUMERO  : [0-9]+ ('.' [0-9]+)? ;
 STRING  : '"' .*? '"' ;
 NEWLINE : '\r'? '\n' ;
 WS      : [ \t]+ -> skip ;
+ID : [a-zA-Z_][a-zA-Z0-9_]* ;
