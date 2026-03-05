@@ -30,3 +30,30 @@ print(5+5)
 3+3
 
 }
+
+
+base = 10
+altura = 5
+area_triangulo = (base * altura) / 2
+print("El area del triangulo es:")
+print(area_triangulo)
+
+
+operacion_compleja = [ (10 + 5) * 2 ] / [ 5 + 1 ]
+print("Resultado con corchetes:")
+print(operacion_compleja)
+
+
+limite = 100
+valor_actual = 85
+es_valido = valor_actual < limite && valor_actual > 0
+print("¿El valor es valido dentro del limite?")
+print(es_valido)
+
+
+nota_final = 61
+simon (nota_final >= 60) {
+    print("Estado del estudiante: Aprobado")
+} sinel {
+    print("Estado del estudiante: Reprobado")
+}
