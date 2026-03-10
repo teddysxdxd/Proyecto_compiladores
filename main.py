@@ -48,8 +48,8 @@ class EvaluarVisitante(CalculadoraVisitor):
     def visitIfStatement(self, ctx):
         condicion = self.visit(ctx.expresion())
         # Si la condición (expresion) es 1 (verdadero)
-        if condicion == 1:
-            return self.visit(ctx.block(0)) 
+        if condicion is not None and float(condicion) == 1:
+            return self.visit(ctx.block(0))
         # Si existe el bloque 'sinel' (índice 1)
         else_block = ctx.block(1)
         if else_block:
@@ -74,6 +74,12 @@ class EvaluarVisitante(CalculadoraVisitor):
     def visitRelacional(self, ctx):
         izq = self.visit(ctx.expresion(0))
         der = self.visit(ctx.expresion(1))
+
+        if izq is None or der is None: return 0
+        
+        val_izq = float(izq)
+        val_der = float(der)
+
         op = ctx.op.text
         if op == '==': return 1 if izq == der else 0
         if op == '!=' or op == '<>': return 1 if izq != der else 0
@@ -108,9 +114,30 @@ class EvaluarVisitante(CalculadoraVisitor):
     def visitParentesis(self, ctx):
         return self.visit(ctx.expresion())
 
+    def __init__(self):
+        # Espeacio en memoria del programa para almacenar nuestras variables
+        self.memoria = {}
+
+        #Iplementa la asignación (ID = Expresion)
+    def visitAsignacion(self, ctx):
+        nombre = ctx.ID().getText() # Obtiene la variable eje: X/y
+        valor = self.visit(ctx.expresion()) # Verifica el valor eje: 67
+        self.memoria[nombre] = valor
+        return valor
+
+        # Implementa la varible difinida
+    def visitVariable(self, ctx):
+        nombre = ctx.ID().getText()
+        if nombre in self.memoria:
+            return self.memoria[nombre]
+        print(f"Error: La variable '{nombre}'no esta definida.")
+        return 0
+    def visitCorchetes(self, ctx):
+        return self.visit(ctx.expresion())
+
 def main():
     try:
-        input_stream = FileStream('operaciones.txt')
+        input_stream = FileStream('operaciones.txt' , encoding='utf-8')
         lexer = CalculadoraLexer(input_stream)
         stream = CommonTokenStream(lexer)
         parser = CalculadoraParser(stream)
