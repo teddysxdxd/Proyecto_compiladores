@@ -4,7 +4,7 @@ grammar Calculadora;
 archivo : (instruccion | NEWLINE)* EOF ;
 
 instruccion : expresion                    # InstruccionExpresion
-            | ID '=' expresion             # Asignacion
+            | ID ASSIGN  expresion             # Asignacion
             | PRINTI PARENTESISI expresion    PARENTESISD   # printStmt
             | ifStatement                  # InstruccionIf
             | block                        # InstruccionBloque
@@ -17,8 +17,8 @@ block : BLOCKI (instruccion | NEWLINE)* BLOCKF ;
 ifStatement : IFINICIO PARENTESISI expresion PARENTESISD block (ELSE block)? ;
 
 // Jerarquía de expresiones (de mayor a menor precedencia)
-expresion : PARENTESISI expresion PARENTESISD
-          | '[' expresion ']'                 # Corchetes                 # Parentesis
+expresion : PARENTESISI expresion PARENTESISD # Parentesis
+          | CORCHI expresion CORCHD                 # Corchetes               
           | NUMERO                            # Numero
           | STRING                            # Cadena
           | ID                                # Variable
@@ -37,6 +37,8 @@ IFINICIO: 'simon';
 ELSE : 'sinel';
 PARENTESISI :'(';
 PARENTESISD : ')';
+CORCHI : '[';
+CORCHD : ']';
 NOTLOGICO : '!';
 MULT    : '*';
 DIV     : '/';
@@ -56,3 +58,4 @@ STRING  : '"' .*? '"' ;
 NEWLINE : '\r'? '\n' ;
 WS      : [ \t]+ -> skip ;
 ID : [a-zA-Z_][a-zA-Z0-9_]* ;
+ASSIGN : '=';
