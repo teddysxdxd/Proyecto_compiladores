@@ -1,7 +1,7 @@
 grammar Calculadora;
 
 // El archivo puede contener instrucciones o líneas vacías
-archivo : (instruccion | NEWLINE)* EOF ;
+archivo : INICIOPROGRAMA (instruccion | NEWLINE)* FINPROGRAMA EOF ;
 
 instruccion : expresion                    # InstruccionExpresion
             | ID ASSIGN  expresion             # Asignacion
@@ -30,6 +30,8 @@ expresion : PARENTESISI expresion PARENTESISD # Parentesis
           ;
 
 // Lexer Rules
+INICIOPROGRAMA: 'Program';
+FINPROGRAMA: 'End_Program';
 PRINTI  : 'print';
 BLOCKI  : '{';
 BLOCKF  : '}';
