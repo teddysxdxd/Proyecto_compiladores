@@ -21,11 +21,9 @@ simon (10 > 5) {
     20 - 2
 }
 
-simon(5 +10 ==15){
+simon(5 +10 ==12){
 print("hola, esto es una prueba xdd\r")
 print(5+5)
-
-
 }sinel{
 3+3
 

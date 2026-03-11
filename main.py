@@ -1,11 +1,12 @@
 import sys
+import subprocess
 from antlr4 import *
 from CalculadoraLexer import CalculadoraLexer
 from CalculadoraParser import CalculadoraParser
 from CalculadoraVisitor import CalculadoraVisitor
+from antlr4.tree.Trees import Trees
 
 class EvaluarVisitante(CalculadoraVisitor):
-    
     # --- Estructura del Programa ---
     def visitInstruccionExpresion(self, ctx):
         resultado = self.visit(ctx.expresion())
@@ -134,6 +135,39 @@ class EvaluarVisitante(CalculadoraVisitor):
         return 0
     def visitCorchetes(self, ctx):
         return self.visit(ctx.expresion())
+        
+def generar_dot(tree, parser):
+    """Genera el contenido en formato DOT para Graphviz"""
+    from antlr4.tree.Trees import Trees
+    lineas = ["digraph AST {"]
+    lineas.append('  node [fontname="Arial", shape=box, style=filled, fillcolor="#e1f5fe"];')
+    
+    def recorrer(nodo, id_padre=0, siguiente_id=1):
+        texto = Trees.getNodeText(nodo, parser.ruleNames).replace('"', '\\"')
+        mi_id = siguiente_id
+        lineas.append(f'  n{mi_id} [label="{texto}"];')
+        if id_padre != 0:
+            lineas.append(f"  n{id_padre} -> n{mi_id};")
+        
+        nuevo_id = mi_id + 1
+        for i in range(nodo.getChildCount()):
+            nuevo_id = recorrer(nodo.getChild(i), mi_id, nuevo_id)
+        return nuevo_id
+
+    recorrer(tree)
+    lineas.append("}")
+    return "\n".join(lineas)
+
+def guardar_ast_grafico(tree, parser, nombre_archivo="arbol_ast"):
+    dot_data = generar_dot(tree, parser)
+    with open(f"{nombre_archivo}.dot", "w") as f:
+        f.write(dot_data)
+    try:
+        # Esto genera el archivo .png automáticamente
+        subprocess.run(["dot", "-Tpng", f"{nombre_archivo}.dot", "-o", f"{nombre_archivo}.png"])
+        print(f"\n[ÉXITO] Árbol guardado como {nombre_archivo}.png")
+    except Exception as e:
+        print(f"\n[ERROR] No se pudo generar la imagen: {e}")
 
 def main():
     try:
@@ -141,8 +175,16 @@ def main():
         lexer = CalculadoraLexer(input_stream)
         stream = CommonTokenStream(lexer)
         parser = CalculadoraParser(stream)
-        tree = parser.archivo()
 
+        tree = parser.archivo()
+        guardar_ast_grafico(tree, parser)
+
+        print("\n" + "="*30)
+        print("ESTRUCTURA DEL ÁRBOL SINTÁCTICO (AST)")
+        print("="*30)
+        print(Trees.toStringTree(tree, parser.ruleNames, parser))
+        print("="*30 + "\n")
+        
         evaluador = EvaluarVisitante()
         evaluador.visit(tree)
         
