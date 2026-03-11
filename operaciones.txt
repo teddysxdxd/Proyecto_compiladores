@@ -1,57 +1,61 @@
-10 + 5 * 2
-(20 - 4) / 2
-100.5 + 0.5
-(20.3+3.3)*2.3+1.7
-(5 + 5) != 11
-6 > 9 
-(3*3*3) == 27
-(5 + 5) <> 11
-9 >= 1
-15 <= 2
-5 + 5 == 10 && 10 == 10
-3 + 4 == 8 && 3 * 2 == 6
-3 + 3 == 6 || 3+3 == 6
-! (10 > 5)
-!(2+2 == 4) && 3 + 3 == 6
-(5 + 5 == 10) && 3 + 3 == 6
-(5 + 5 == 10) && 3 + 3 == 8
-simon (10 > 5) {
-    10 + 5
-} sinel {
-    20 - 2
-}
+Program
+    10 + 5 * 2
+    (20 - 4) / 2
+    100.5 + 0.5
+    (20.3+3.3)*2.3+1.7
+    (5 + 5) != 11
+    6 > 9 
+    (3*3*3) == 27
+    (5 + 5) <> 11
+    9 >= 1
+    15 <= 2
+    5 + 5 == 10 && 10 == 10
+    3 + 4 == 8 && 3 * 2 == 6
+    3 + 3 == 6 || 3+3 == 6
+    ! (10 > 5)
+    !(2+2 == 4) && 3 + 3 == 6
+    (5 + 5 == 10) && 3 + 3 == 6
+    (5 + 5 == 10) && 3 + 3 == 8
+    simon (10 > 5) {
+        10 + 5
+    } sinel {
+        20 - 2
+    }
 
-simon(5 +10 ==12){
-print("hola, esto es una prueba xdd\r")
-print(5+5)
-}sinel{
-3+3
-
-}
+    simon(5 +10 ==15){
+    print("hola, esto es una prueba xdd\r")
+    print(5+5)
 
 
-base = 10
-altura = 5
-area_triangulo = (base * altura) / 2
-print("El area del triangulo es:")
-print(area_triangulo)
+    }sinel{
+    3+3
+
+    }
 
 
-operacion_compleja = [ (10 + 5) * 2 ] / [ 5 + 1 ]
-print("Resultado con corchetes:")
-print(operacion_compleja)
+    base = 10
+    altura = 5
+    area_triangulo = (base * altura) / 2
+    print("El area del triangulo es:")
+    print(area_triangulo)
 
 
-limite = 100
-valor_actual = 85
-es_valido = valor_actual < limite && valor_actual > 0
-print("¿El valor es valido dentro del limite?")
-print(es_valido)
+    operacion_compleja = [ (10 + 5) * 2 ] / [ 5 + 1 ]
+    print("Resultado con corchetes:")
+    print(operacion_compleja)
 
 
-nota_final = 61
-simon (nota_final >= 60) {
-    print("Estado del estudiante: Aprobado")
-} sinel {
-    print("Estado del estudiante: Reprobado")
-}
+    limite = 100
+    valor_actual = 85
+    es_valido = valor_actual < limite && valor_actual > 0
+    print("¿El valor es valido dentro del limite?")
+    print(es_valido)
+
+
+    nota_final = 61
+    simon (nota_final >= 60) {
+        print("Estado del estudiante: Aprobado")
+    } sinel {
+        print("Estado del estudiante: Reprobado")
+    }
+End_Program
