@@ -137,7 +137,7 @@ class EvaluarVisitante(CalculadoraVisitor):
         return self.visit(ctx.expresion())
         
 def generar_dot(tree, parser):
-    """Genera el contenido en formato DOT para Graphviz"""
+    #Genera el contenido en formato DOT para Graphviz
     from antlr4.tree.Trees import Trees
     lineas = ["digraph AST {"]
     lineas.append('  node [fontname="Arial", shape=box, style=filled, fillcolor="#e1f5fe"];')
