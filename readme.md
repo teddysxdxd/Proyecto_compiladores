@@ -118,7 +118,14 @@ antlr4 -Dlanguage=Python3 -visitor Calculadora.g4
 
 Esto genera los archivos `CalculadoraLexer.py`, `CalculadoraParser.py`, etc.
 
-### Paso 5 — Correr el intérprete
+## Paso 5 - Instalar dependencias de graphviz
+
+```bash
+sudo apt install graphviz
+```
+Esto generará dos archivos los cuales tienen de nombre `arbol.dot` y `arbol_ast.png`
+
+### Paso 6 — Correr el intérprete
 
 ```bash
 python3 main.py

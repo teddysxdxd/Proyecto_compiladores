@@ -1,7 +1,7 @@
 grammar Calculadora;
 
 // El archivo puede contener instrucciones o líneas vacías
-archivo : INICIOPROGRAMA (instruccion | NEWLINE)* FINPROGRAMA EOF ;
+archivo : INICIOPROGRAMA instruccion* FINPROGRAMA EOF ;
 
 instruccion : expresion                    # InstruccionExpresion
             | ID ASSIGN  expresion             # Asignacion
@@ -11,17 +11,17 @@ instruccion : expresion                    # InstruccionExpresion
             ;
 
 // Un bloque es una lista de instrucciones entre llaves
-block : BLOCKI (instruccion | NEWLINE)* BLOCKF ;
+block : BLOCKI instruccion* BLOCKF ;
 
 // Tu estructura condicional personalizada
 ifStatement : IFINICIO PARENTESISI expresion PARENTESISD block (ELSE block)? ;
 
 // Jerarquía de expresiones (de mayor a menor precedencia)
 expresion : PARENTESISI expresion PARENTESISD # Parentesis
-          | CORCHI expresion CORCHD                 # Corchetes               
-          | NUMERO                            # Numero
-          | STRING                            # Cadena
-          | ID                                # Variable
+          | CORCHI expresion CORCHD                 # Corchetes                
+          | NUMERO                             # Numero
+          | STRING                             # Cadena
+          | ID                                 # Variable
           | NOTLOGICO expresion                     # NotLogico
           | expresion op=(MULT|DIV) expresion  # MultiplicacionDivisision
           | expresion op=(SUM|REST) expresion   # SumaResta
@@ -57,7 +57,10 @@ AND : '&&';
 OR  : '||' ;
 NUMERO  : [0-9]+ ('.' [0-9]+)? ;
 STRING  : '"' .*? '"' ;
-NEWLINE : '\r'? '\n' ;
-WS      : [ \t]+ -> skip ;
+
+// Regla para omitir espacios, tabulaciones y saltos de línea
+WS : [ \t\r\n]+ -> skip ;
+
+// ID debe ir después de las palabras reservadas
 ID : [a-zA-Z_][a-zA-Z0-9_]* ;
 ASSIGN : '=';
