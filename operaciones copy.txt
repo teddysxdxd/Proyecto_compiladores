@@ -1,0 +1,12 @@
+Program
+x = 10
+y = 20
+z = x + y * 2
+simon (z > 30) {
+    w = z / 2
+} sinel {
+    w = z - 5
+}
+print(z)
+print(w)
+End_Program
