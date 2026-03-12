@@ -7,3 +7,5 @@
 *Visitor.py
 *Lexer.py
 /.antlr
+*.dot
+*.png
