@@ -1,46 +1,69 @@
 grammar Calculadora;
 
-// El archivo puede contener instrucciones o líneas vacías
+// El archivo ahora es un bloque Program/End_Program
 archivo : INICIOPROGRAMA instruccion* FINPROGRAMA EOF ;
 
-instruccion : expresion                    # InstruccionExpresion
-            | ID ASSIGN  expresion             # Asignacion
-            | PRINTI PARENTESISI expresion    PARENTESISD   # printStmt
-            | ifStatement                  # InstruccionIf
-            | block                        # InstruccionBloque
+instruccion : declaracion           # InstruccionDeclaracion
+            | asignacion            # EjecutarAsignacion
+            | PRINTI PARENTESISI expresion PARENTESISD # EjecutarPrint
+            | ifStatement           # InstruccionIf
+            | whileStatement        # InstruccionWhile
+            | forStatement          # InstruccionFor
+            | returnStmt            # InstruccionReturn
+            | funcionDecl           # InstruccionFuncion
+            | expresion             # InstruccionExpresion
+            | block                 # InstruccionBloque
             ;
 
-// Un bloque es una lista de instrucciones entre llaves
-block : BLOCKI instruccion* BLOCKF ;
+// Tipos explícitos y funciones
+declaracion : TIPO ID (ASSIGN expresion)? ;
+asignacion  : ID ASSIGN expresion ;
+returnStmt  : RETURN expresion ;
 
-// Tu estructura condicional personalizada
+funcionDecl : TIPO ID PARENTESISI (params)? PARENTESISD block ;
+params      : TIPO ID (',' TIPO ID)* ;
+
+// Estructuras de control
+whileStatement : WHILE PARENTESISI expresion PARENTESISD block ;
+forStatement   : FOR PARENTESISI asignacion ';' expresion ';' asignacion PARENTESISD block ;
+block          : BLOCKI instruccion* BLOCKF ;
+
 ifStatement : IFINICIO PARENTESISI expresion PARENTESISD block (ELSE block)? ;
 
-// Jerarquía de expresiones (de mayor a menor precedencia)
+// Jerarquía de expresiones
 expresion : PARENTESISI expresion PARENTESISD # Parentesis
-          | CORCHI expresion CORCHD                 # Corchetes                
-          | NUMERO                             # Numero
-          | STRING                             # Cadena
-          | ID                                 # Variable
-          | NOTLOGICO expresion                     # NotLogico
-          | expresion op=(MULT|DIV) expresion  # MultiplicacionDivisision
-          | expresion op=(SUM|REST) expresion   # SumaResta
+          | CORCHI expresion CORCHD           # Corchetes
+          | NUMERO                            # Numero
+          | STRING                            # Cadena
+          | BOOLEANO                          # Booleano
+          | ID                                # Variable
+          | ID PARENTESISI (args)? PARENTESISD # LlamadaFuncion
+          | NOTLOGICO expresion               # NotLogico
+          | expresion op=(MULT|DIV) expresion # MultiplicacionDivisision
+          | expresion op=(SUM|REST) expresion # SumaResta
           | expresion op=(IGUALA|DIFERENTEA|DIFERENTEA2|MENORQUE|MAYORQUE|MENORIGUAL|MAYORIGUAL) expresion # Relacional
-          | expresion op=(AND|OR) expresion # AndOrLogico
+          | expresion op=(AND|OR) expresion   # AndOrLogico
           ;
 
+args : expresion (',' expresion)* ;
+
 // Lexer Rules
+TIPO    : 'int' | 'float' | 'string' | 'bool' | 'void' ;
 INICIOPROGRAMA: 'Program';
 FINPROGRAMA: 'End_Program';
 PRINTI  : 'print';
 BLOCKI  : '{';
 BLOCKF  : '}';
 IFINICIO: 'simon';
-ELSE : 'sinel';
-PARENTESISI :'(';
-PARENTESISD : ')';
-CORCHI : '[';
-CORCHD : ']';
+ELSE    : 'sinel';
+WHILE   : 'while';
+FOR     : 'for';
+RETURN  : 'return';
+PARENTESISI: '(';
+PARENTESISD: ')';
+CORCHI  : '[';
+CORCHD  : ']';
+BOOLEANO: 'true' | 'false';
 NOTLOGICO : '!';
 MULT    : '*';
 DIV     : '/';
@@ -52,15 +75,12 @@ DIFERENTEA2 : '<>';
 MENORQUE: '<';
 MAYORQUE: '>';
 MENORIGUAL: '<=';
-MAYORIGUAL:'>=';
+MAYORIGUAL: '>=';
 AND : '&&';
 OR  : '||' ;
+
 NUMERO  : [0-9]+ ('.' [0-9]+)? ;
 STRING  : '"' .*? '"' ;
-
-// Regla para omitir espacios, tabulaciones y saltos de línea
-WS : [ \t\r\n]+ -> skip ;
-
-// ID debe ir después de las palabras reservadas
-ID : [a-zA-Z_][a-zA-Z0-9_]* ;
-ASSIGN : '=';
+WS      : [ \t\r\n]+ -> skip ;
+ID      : [a-zA-Z_][a-zA-Z0-9_]* ;
+ASSIGN  : '=';
