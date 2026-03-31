@@ -1,12 +1,9 @@
 Program
-    int x = 5
-    int factorial(int n) {
-        simon (n <= 1) {
-            return 1
-        } sinel {
-            return n * factorial(n - 1)
-        }
-    }
-    int res = factorial(x)
-    print(res)
+   
+    int base = 10
+    int altura = 5
+    int area_triangulo = (base * altura) / 2
+    print("El area del triangulo es:")
+    print(area_triangulo)
+
 End_Program

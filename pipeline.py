@@ -64,7 +64,8 @@ def run_pipeline(archivo_entrada):
             return
 
         # 3. Generación de Evidencia (Imagen del Árbol)
-        generar_ast_imagen(tree, parser)
+       # generar_ast_imagen(tree, parser)
+       
 
         # 4. Fase Semántica (Type Checking)
         print("\nIniciando análisis semántico...")
@@ -86,6 +87,7 @@ def run_pipeline(archivo_entrada):
         interpreter.visit(tree)
         print("-" * 30)
         print("Programa finalizado con éxito.")
+        subprocess.run(["python3", "compiler.py"], check=True)
 
     except Exception as e:
         if "Fallo en Fase Léxica" in str(e):
