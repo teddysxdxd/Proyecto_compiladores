@@ -1,0 +1,11 @@
+/venv
+/__pycache__
+*.interp
+*.tokens
+*Listener.py
+*Parser.py
+*Visitor.py
+*Lexer.py
+/.antlr
+*.dot
+*.png
