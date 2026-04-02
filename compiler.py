@@ -113,8 +113,13 @@ class EvaluarVisitante(CalculadoraVisitor):
         return resultado
 
     # ---------------- RETURN ----------------
-    def visitReturnStmt(self, ctx):
-        return self.visit(ctx.expresion())
+    def visitInstruccionReturn(self, ctx):
+        expr = ctx.returnStmt().expresion()
+        
+        if expr:
+            return self.visit(expr)   # return con valor
+        else:
+            return None              # return vacío
 
     # ---------------- FUNCIONES ----------------
     def visitFuncionDecl(self, ctx):

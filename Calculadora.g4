@@ -18,7 +18,7 @@ instruccion : declaracion           # InstruccionDeclaracion
 // Tipos explícitos y funciones
 declaracion : TIPO ID (ASSIGN expresion)? ;
 asignacion  : ID ASSIGN expresion ;
-returnStmt  : RETURN expresion ;
+returnStmt  : RETURN (expresion)? ;
 
 funcionDecl : TIPO ID PARENTESISI (params)? PARENTESISD block ;
 params      : TIPO ID (',' TIPO ID)* ;

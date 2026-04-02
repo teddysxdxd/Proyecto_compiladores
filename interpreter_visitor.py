@@ -114,3 +114,12 @@ class InterpreterVisitor(CalculadoraVisitor):
         izq = self.visit(ctx.expresion(0))
         der = self.visit(ctx.expresion(1))
         return izq + der if ctx.op.text == '+' else izq - der
+    
+    
+    def visitInstruccionReturn(self, ctx):
+        expr = ctx.returnStmt().expresion()
+        
+        if expr:
+            return self.visit(expr)   # return con valor
+        else:
+            return None              # return vacío

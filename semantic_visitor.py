@@ -139,4 +139,9 @@ class SemanticVisitor(CalculadoraVisitor):
         return None
 
     def visitInstruccionReturn(self, ctx):
-        return self.visit(ctx.returnStmt().expresion())
+        expr = ctx.returnStmt().expresion()
+        
+        if expr:
+            return self.visit(expr)   # return con valor
+        else:
+            return None              # return vacío
