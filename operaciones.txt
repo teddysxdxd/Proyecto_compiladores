@@ -51,4 +51,7 @@ suma(10, 20)
 doble(4)
 esMayor(7, 2)
 
+return 5
+print(10)
+
 End_Program

@@ -36,8 +36,8 @@ expresion : PARENTESISI expresion PARENTESISD # Parentesis
           | NUMERO                            # Numero
           | STRING                            # Cadena
           | BOOLEANO                          # Booleano
-          | ID                                # Variable
           | ID PARENTESISI (args)? PARENTESISD # LlamadaFuncion
+          | ID                                # Variable
           | NOTLOGICO expresion               # NotLogico
           | expresion op=(MULT|DIV) expresion # MultiplicacionDivisision
           | expresion op=(SUM|REST) expresion # SumaResta
