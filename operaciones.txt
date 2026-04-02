@@ -2,6 +2,12 @@ Program
 int x = 12
 int y = -12
 int resultado = x+y
+<<<<<<< HEAD
 print("la suma de los numeros es: " + (resultado)+  " esta es una concatenacion " + resultado + " es la suma de dos numeros: " + (((1*4)/4)+5))
 print(resultado)
+=======
+print("la suma de los numeros es: " + (resultado))
+
+return 
+>>>>>>> 1aaedd4e8e3a6a1eaadf00f3abb66b2592cc87e5
 End_Program

@@ -79,7 +79,7 @@ MAYORIGUAL: '>=';
 AND : '&&';
 OR  : '||' ;
 
-NUMERO  : '-'? [0-9]+ ('.' [0-9]+)? ;
+NUMERO  : [0-9]+ ('.' [0-9]+)? ;
 STRING  : '"' .*? '"' ;
 WS      : [ \t\r\n]+ -> skip ;
 ID      : [a-zA-Z_][a-zA-Z0-9_]* ;
