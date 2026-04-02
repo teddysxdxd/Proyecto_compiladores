@@ -3,5 +3,6 @@ int x = 12
 int y = 12
 int resultado = x+y
 print("la suma de los numeros es: " + (resultado))
-print(resultado)
+
+return 
 End_Program

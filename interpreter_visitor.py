@@ -80,7 +80,12 @@ class InterpreterVisitor(CalculadoraVisitor):
         return resultado
 
     def visitInstruccionReturn(self, ctx):
-        return self.visit(ctx.returnStmt().expresion())
+        expr = ctx.returnStmt().expresion()
+        
+        if expr:
+            return self.visit(expr)   # return con valor
+        else:
+            return None              # return vacío
 
     # --- Impresión ---
     def visitPrintStmt(self, ctx):
