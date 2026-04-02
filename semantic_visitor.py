@@ -124,10 +124,22 @@ class SemanticVisitor(CalculadoraVisitor):
     def visitSumaResta(self, ctx):
         t1 = self.visit(ctx.expresion(0))
         t2 = self.visit(ctx.expresion(1))
-        if t1 == "string" or t2 == "string":
-            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Operación no válida con strings.")
-            return "unknown"
-        return "float" if t1 == "float" or t2 == "float" else "int"
+        
+        # Permitir concatenación con '+'
+        if ctx.op.text == '+':
+            # Si alguno es string, el resultado es string (concatenación)
+            if t1 == "string" or t2 == "string":
+                return "string"
+            # Si no hay strings, es operación numérica
+            return "float" if t1 == "float" or t2 == "float" else "int"
+        
+        # Para resta '-', no permitir strings
+        else:  # ctx.op.text == '-'
+            if t1 == "string" or t2 == "string":
+                self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: No se puede restar con strings.")
+                return "unknown"
+            return "float" if t1 == "float" or t2 == "float" else "int"
+
 
     def visitRelacional(self, ctx):
         self.visit(ctx.expresion(0))

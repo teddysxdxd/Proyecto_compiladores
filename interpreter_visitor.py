@@ -110,16 +110,20 @@ class InterpreterVisitor(CalculadoraVisitor):
         # Agrega aquí los demás: !=, <, >= [cite: 19]
         return False
 
-    def visitSumaResta(self, ctx):
-        izq = self.visit(ctx.expresion(0))
-        der = self.visit(ctx.expresion(1))
-        return izq + der if ctx.op.text == '+' else izq - der
+def visitSumaResta(self, ctx):
+    izq = self.visit(ctx.expresion(0))
+    der = self.visit(ctx.expresion(1))
     
-    
-    def visitInstruccionReturn(self, ctx):
-        expr = ctx.returnStmt().expresion()
-        
-        if expr:
-            return self.visit(expr)   # return con valor
+    # Concatenación si alguno es string
+    if isinstance(izq, str) or isinstance(der, str):
+        if ctx.op.text == '+':
+            # Convierte ambos a string y concatena
+            return str(izq) + str(der)
         else:
-            return None              # return vacío
+            raise RuntimeError(f"No se puede restar con strings: {izq} - {der}")
+    
+    # Suma/resta numérica normal
+    if ctx.op.text == '+':
+        return izq + der
+    else:
+        return izq - der

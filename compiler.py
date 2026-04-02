@@ -179,11 +179,12 @@ class EvaluarVisitante(CalculadoraVisitor):
         if ctx.op.text == '*':
             return izq * der
         return izq / der if der != 0 else 0
-
     def visitSumaResta(self, ctx):
         izq = self.visit(ctx.expresion(0))
         der = self.visit(ctx.expresion(1))
         if ctx.op.text == '+':
+            if isinstance(izq, str) or isinstance(der, str):
+                return str(izq) + str(der)
             return izq + der
         return izq - der
 
