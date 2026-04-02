@@ -1,7 +1,10 @@
 Program
-int x = 12
-int y = -12
-int resultado = x+y
-print("la suma de los numeros es: " + (resultado)+  " esta es una concatenacion " + resultado + " es la suma de dos numeros: " + (((1*4)/4)+5))
-print(resultado)
+    int x = 100  
+    
+    int miFuncion(int x) { 
+       
+        return x
+       
+    }
+     print(x)
 End_Program
