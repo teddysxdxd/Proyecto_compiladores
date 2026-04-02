@@ -23,15 +23,7 @@ class EvaluarVisitante(CalculadoraVisitor):
     def visitInstruccionExpresion(self, ctx):
         resultado = self.visit(ctx.expresion())
         if resultado is not None:
-            if isinstance(resultado, (int, float)):
-                if resultado == 1:
-                    print("Resultado: verdadero")
-                elif resultado == 0:
-                    print("Resultado: falso")
-                else:
-                    print(f"Resultado: {resultado}")
-            else:
-                print(f"Resultado: {resultado}")
+            print(f"Resultado: {resultado}")
         return resultado
 
     def visitEjecutarPrint(self, ctx):
