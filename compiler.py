@@ -38,12 +38,7 @@ class EvaluarVisitante(CalculadoraVisitor):
         resultado = self.visit(ctx.expresion())
         if resultado is not None:
             if isinstance(resultado, (int, float)):
-                if resultado == 1:
-                    print("verdadero")
-                elif resultado == 0:
-                    print("falso")
-                else:
-                    print(resultado)
+                print(resultado)
             else:
                 print(resultado)
         return None
