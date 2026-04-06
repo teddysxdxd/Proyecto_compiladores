@@ -30,6 +30,10 @@ Este proyecto implementa un **intérprete** para un lenguaje de programación pe
 El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, variables, estructuras condicionales (`simon` / `sinel`) y bloques de código.
 
 ---
+## 🌳 Visualización del AST
+El proyecto utiliza **Graphviz** para generar una representación visual de la estructura jerárquica del código fuente. Esto facilita la depuración de la gramática y el análisis de la precedencia de operadores.
+
+![AST Example](./arbol_ast.png)
 
 ## 🚀 Novedades del Proyecto 2
 
@@ -65,6 +69,9 @@ Esto garantiza que el código sea válido antes de ejecutarse.
 - Errores léxicos, sintácticos y semánticos
 - Reporte detallado con línea y columna
 - Implementado en `custom_errors.py`
+# Ejemplo de salida ante un error semántico:
+[ERROR SEMÁNTICO] Línea 5:12 - La variable 'resultado' ya ha sido declarada en este ámbito.
+[ERROR DE TIPOS] Línea 8:05 - No se puede sumar 'INT' con 'BOOL'.
 
 ---
 
@@ -79,7 +86,7 @@ Esto garantiza que el código sea válido antes de ejecutarse.
 | Condicional | `simon ( condición ) { }` / `sinel { }` |
 | I/O | `print( expresión )` |
 | Delimitadores | `Program` … `End_Program` |
-| Tipos | `int`, `float`, `string`, `bool` |
+| Tipos | `int`, `float`, `string`, `bool`, |
 | Funciones | Declaración, parámetros y retorno |
 
 ---
@@ -222,6 +229,22 @@ Program
     print("Factorial: " + res)
 End_Program
 ```
+
+### Control de Retorno (Return)
+
+Program
+    int duplicar(int n) {
+        return n * 2
+    }
+
+    int sumar(int a, int b) {
+        return a + b
+    }
+
+    // Ejemplo de composición: El return de una entra en la otra
+    int resultado = sumar(duplicar(5), 10) 
+    print("El resultado compuesto es: " + resultado) // Salida: 20
+End_Program
 
 ---
 
