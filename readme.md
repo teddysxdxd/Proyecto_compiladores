@@ -51,10 +51,19 @@ El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, v
 ```
 Proyecto_compiladores/
 │
-├── Calculadora.g4          # Gramática ANTLR4 (lexer + parser)
-├── main.py                 # Punto de entrada — ejecuta el intérprete
-├── operaciones.txt         # Archivo de ejemplo con código del lenguaje
-├── readme.md               # Este archivo
+├── .antlr/                 # Archivos temporales de ANTLR
+├── venv/                   # Entorno virtual de Python
+├── Calculadora.g4          # Gramática principal (Lexer + Parser)
+├── compiler.py             # Script principal del compilador
+├── interpreter_visitor.py  # Lógica del intérprete (Visitor)
+├── semantic_visitor.py     # Verificación de reglas semánticas
+├── symbol_table.py         # Gestión de tabla de símbolos
+├── custom_errors.py        # Manejo de errores personalizados
+├── pipeline.py             # Flujo de ejecución del proyecto
+├── operaciones.txt         # Archivo de entrada con código fuente
+├── arbol_ast.png           # Visualización del árbol generado
+├── readme.md               # Documentación del proyecto
+└── .gitignore              # Archivos excluidos de Git
 └── .gitignore
 ```
 
