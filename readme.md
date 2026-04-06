@@ -273,7 +273,60 @@ expresion → número | cadena | variable | operación aritmética | operación 
 <summary><strong>Ver gramática completa</strong></summary>
 
 ```antlr
-// (Se mantiene igual que tu versión original)
+```antlr
+grammar Calculadora;
+
+archivo : INICIOPROGRAMA (instruccion | NEWLINE)* FINPROGRAMA EOF ;
+
+instruccion : expresion                                                          # InstruccionExpresion
+            | ID ASSIGN expresion                                                # Asignacion
+            | PRINTI PARENTESISI expresion PARENTESISD                          # printStmt
+            | ifStatement                                                        # InstruccionIf
+            | block                                                              # InstruccionBloque
+            ;
+
+block : BLOCKI (instruccion | NEWLINE)* BLOCKF ;
+
+ifStatement : IFINICIO PARENTESISI expresion PARENTESISD block (ELSE block)? ;
+
+expresion : PARENTESISI expresion PARENTESISD                                   # Parentesis
+          | CORCHI expresion CORCHD                                              # Corchetes
+          | NUMERO                                                               # Numero
+          | STRING                                                               # Cadena
+          | ID                                                                   # Variable
+          | NOTLOGICO expresion                                                  # NotLogico
+          | expresion op=(MULT|DIV) expresion                                   # MultiplicacionDivisision
+          | expresion op=(SUM|REST) expresion                                   # SumaResta
+          | expresion op=(IGUALA|DIFERENTEA|DIFERENTEA2|MENORQUE|
+                          MAYORQUE|MENORIGUAL|MAYORIGUAL) expresion             # Relacional
+          | expresion op=(AND|OR) expresion                                     # AndOrLogico
+          ;
+
+// Palabras clave
+INICIOPROGRAMA : 'Program';
+FINPROGRAMA    : 'End_Program';
+PRINTI         : 'print';
+IFINICIO       : 'simon';
+ELSE           : 'sinel';
+
+// Operadores
+MULT : '*';  DIV : '/';  SUM : '+';  REST : '-';
+IGUALA : '==';  DIFERENTEA : '!=';  DIFERENTEA2 : '<>';
+MENORQUE : '<';  MAYORQUE : '>';  MENORIGUAL : '<=';  MAYORIGUAL : '>=';
+AND : '&&';  OR : '||';  NOTLOGICO : '!';  ASSIGN : '=';
+
+// Delimitadores
+BLOCKI : '{';  BLOCKF : '}';
+PARENTESISI : '(';  PARENTESISD : ')';
+CORCHI : '[';  CORCHD : ']';
+
+// Literales e identificadores
+NUMERO  : [0-9]+ ('.' [0-9]+)? ;
+STRING  : '"' .*? '"' ;
+ID      : [a-zA-Z_][a-zA-Z0-9_]* ;
+NEWLINE : '\r'? '\n' ;
+WS      : [ \t]+ -> skip ;
+```
 ```
 
 </details>
