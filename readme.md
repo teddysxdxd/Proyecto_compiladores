@@ -64,7 +64,7 @@ Proyecto_compiladores/
 ├── arbol_ast.png           # Visualización del árbol generado
 ├── readme.md               # Documentación del proyecto
 └── .gitignore              # Archivos excluidos de Git
-└── .gitignore
+
 ```
 
 > ⚙️ Al ejecutar `antlr4`, se generan automáticamente los siguientes archivos (no subir al repo):
