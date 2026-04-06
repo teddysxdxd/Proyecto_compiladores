@@ -113,7 +113,7 @@ pip install antlr4-python3-runtime
 ### Paso 4 — Generar el parser desde la gramática
 
 ```bash
-antlr4 -Dlanguage=Python3 -visitor Calculadora.g4
+antlr4 -Dlanguage=Python3 -visitor -no-listener Calculadora.g4
 ```
 
 Esto genera los archivos `CalculadoraLexer.py`, `CalculadoraParser.py`, etc.
