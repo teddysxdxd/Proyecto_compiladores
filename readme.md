@@ -137,7 +137,7 @@ Esto generará dos archivos los cuales tienen de nombre `arbol.dot` y `arbol_ast
 ### Paso 6 — Correr el intérprete
 
 ```bash
-python3 main.py
+python3 pipeline.py
 ```
 
 ---
