@@ -254,7 +254,16 @@ def guardar_ast_grafico(tree, parser, nombre_archivo="arbol_ast"):
 
 # ---------------- MAIN ----------------
 def main():
-    input_stream = FileStream('operaciones.txt', encoding='utf-8')
+
+    if len(sys.argv) < 2:
+        print("Error: Debes proporcionar un archivo de entrada")
+        return
+
+    archivo = sys.argv[1]
+
+    print(f"Procesando archivo: {archivo}")
+
+    input_stream = FileStream(archivo, encoding='utf-8')
     lexer = CalculadoraLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = CalculadoraParser(stream)

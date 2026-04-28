@@ -134,7 +134,13 @@ sudo apt install graphviz
 ```
 Esto generará dos archivos los cuales tienen de nombre `arbol.dot` y `arbol_ast.png`
 
-### Paso 6 — Correr el intérprete
+## Paso 6 - Instalacion de Tkinter
+
+```bash
+sudo apt install python3-tk
+```
+
+### Paso 7 — Correr el intérprete
 
 ```bash
 python3 pipeline.py
