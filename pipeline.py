@@ -11,6 +11,7 @@ from CalculadoraParser import CalculadoraParser
 from custom_errors import MyErrorListener, LexerErrorListener
 from semantic_visitor import SemanticVisitor
 from interpreter_visitor import InterpreterVisitor
+from tac_generator import TACGenerator
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 
@@ -46,6 +47,9 @@ def imprimir_resumen(metricas):
 
 def run_pipeline(archivo_entrada):
     metricas = {}
+
+    # El .tac se guarda junto al archivo fuente, mismo nombre base
+    archivo_tac = os.path.splitext(archivo_entrada)[0] + ".tac"
 
     print(f"--- Iniciando Pipeline para: {archivo_entrada} ---")
 
@@ -87,7 +91,18 @@ def run_pipeline(archivo_entrada):
             imprimir_resumen(metricas)
             return
 
-        # 4. Fase de Intérprete
+        # 4. Fase TAC (Código de Tres Direcciones)
+        with medir_fase("Fase TAC", metricas):
+            tac_gen = TACGenerator()
+            tac_gen.visit(tree)
+            tac_gen.save(archivo_tac)
+
+            #print(f"\n--- TAC generado → {archivo_tac} ({len(tac_gen.instructions)} instrucciones) ---")
+            #print(tac_gen.get_tac())
+            #print("---")
+            
+
+        # 5. Fase de Intérprete
         with medir_fase("Fase de Intérprete", metricas):
             print("\nAnálisis exitoso. Iniciando ejecución...")
             print("-" * 30)
@@ -98,7 +113,7 @@ def run_pipeline(archivo_entrada):
             print("-" * 30)
             print("Programa finalizado con éxito.")
 
-        # 5. Fase de Compilación / Ejecución externa
+        # 6. Fase de Compilación / Ejecución externa
         with medir_fase("Fase Compiler.py", metricas):
             subprocess.run(
                 ["python3", "compiler.py", archivo_entrada],
@@ -118,11 +133,11 @@ def run_pipeline(archivo_entrada):
 
 def seleccionar_archivo():
     root = Tk()
-    root.withdraw()  # Oculta la ventana principal
+    root.withdraw()
 
     archivo = askopenfilename(
         title="Selecciona un archivo TXT",
-        initialdir=os.getcwd(),  # raíz del proyecto
+        initialdir=os.getcwd(),
         filetypes=[("Archivos de texto", "*.txt")]
     )
 
