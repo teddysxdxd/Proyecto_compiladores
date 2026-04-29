@@ -134,11 +134,13 @@ sudo apt install graphviz
 ```
 Esto generará dos archivos los cuales tienen de nombre `arbol.dot` y `arbol_ast.png`
 
-## Paso 6 - Instalacion de Tkinter
+## Paso 6 - Instalacion de Tkinter, llvmlite, textual & rich
 
 ```bash
 sudo apt install python3-tk
 sudo pip install llvmlite
+sudo pip install textual 
+sudo pip install rich
 ```
 
 ### Paso 7 — Correr el intérprete

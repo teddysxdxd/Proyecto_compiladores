@@ -21,7 +21,6 @@ from ir_generator import IRGenerator
 def medir_fase(nombre, metricas):
     inicio = time.perf_counter()
     print(f"\n[INICIO] {nombre}")
-
     try:
         yield
     finally:
@@ -49,7 +48,6 @@ def imprimir_resumen(metricas):
 def run_pipeline(archivo_entrada):
     metricas = {}
 
-    # El .tac se guarda junto al archivo fuente, mismo nombre base
     archivo_tac = os.path.splitext(archivo_entrada)[0] + ".tac"
     archivo_ll  = os.path.splitext(archivo_entrada)[0] + ".ll"
 
@@ -93,16 +91,12 @@ def run_pipeline(archivo_entrada):
             imprimir_resumen(metricas)
             return
 
-        # 4. Fase TAC (Código de Tres Direcciones)
+        # 4. Fase TAC
         with medir_fase("Fase TAC", metricas):
             tac_gen = TACGenerator()
             tac_gen.visit(tree)
             tac_gen.save(archivo_tac)
 
-            #print(f"\n--- TAC generado → {archivo_tac} ({len(tac_gen.instructions)} instrucciones) ---")
-            #print(tac_gen.get_tac())
-            #print("---")
-            
         # 5. Fase LLVM IR
         with medir_fase("Fase LLVM IR", metricas):
             ir_gen = IRGenerator()
@@ -114,9 +108,8 @@ def run_pipeline(archivo_entrada):
                 print(f"    Ejecutar con: lli {archivo_ll}")
             else:
                 print("\n[ADVERTENCIA] El IR generado no pasó la verificación LLVM.")
-                print("             El pipeline continúa pero el .ll puede no ser ejecutable.")
 
-        # 5. Fase de Intérprete
+        # 6. Intérprete
         with medir_fase("Fase de Intérprete", metricas):
             print("\nAnálisis exitoso. Iniciando ejecución...")
             print("-" * 30)
@@ -127,12 +120,21 @@ def run_pipeline(archivo_entrada):
             print("-" * 30)
             print("Programa finalizado con éxito.")
 
-        # 6. Fase de Compilación / Ejecución externa
+        # 7. Compiler externo (🔥 AQUÍ ESTABA EL PROBLEMA)
         with medir_fase("Fase Compiler.py", metricas):
-            subprocess.run(
+            print(f"Procesando archivo: {archivo_entrada}\n")
+
+            result = subprocess.run(
                 ["python3", "compiler.py", archivo_entrada],
-                check=True
+                capture_output=True,
+                text=True
             )
+
+            if result.stdout:
+                print(result.stdout)
+
+            if result.stderr:
+                print(result.stderr)
 
         imprimir_resumen(metricas)
 
@@ -158,10 +160,33 @@ def seleccionar_archivo():
     return archivo
 
 
-if __name__ == '__main__':
-    archivo = seleccionar_archivo()
+# 🔥 STREAM (CONSOLA + INTERFAZ SIN ROMPER NADA)
+def run_pipeline_stream(archivo_entrada, callback_linea=None):
 
-    if archivo:
-        run_pipeline(archivo)
-    else:
-        print("No se seleccionó ningún archivo.")
+    class Tee:
+        def __init__(self, *streams):
+            self.streams = streams
+
+        def write(self, data):
+            for s in self.streams:
+                s.write(data)
+            if callback_linea:
+                callback_linea(data)
+
+        def flush(self):
+            for s in self.streams:
+                s.flush()
+
+    old_stdout = sys.stdout
+    sys.stdout = Tee(sys.stdout)
+
+    try:
+        run_pipeline(archivo_entrada)
+    finally:
+        sys.stdout = old_stdout
+
+
+if __name__ == '__main__':
+    from interfaz import CompiladorApp
+    app = CompiladorApp(seleccionar_archivo, run_pipeline_stream)
+    app.run()
