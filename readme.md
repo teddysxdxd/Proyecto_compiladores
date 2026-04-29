@@ -138,6 +138,7 @@ Esto generará dos archivos los cuales tienen de nombre `arbol.dot` y `arbol_ast
 
 ```bash
 sudo apt install python3-tk
+sudo pip install llvmlite
 ```
 
 ### Paso 7 — Correr el intérprete
