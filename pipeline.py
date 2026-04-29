@@ -14,6 +14,7 @@ from interpreter_visitor import InterpreterVisitor
 from tac_generator import TACGenerator
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
+from ir_generator import IRGenerator
 
 
 @contextmanager
@@ -50,6 +51,7 @@ def run_pipeline(archivo_entrada):
 
     # El .tac se guarda junto al archivo fuente, mismo nombre base
     archivo_tac = os.path.splitext(archivo_entrada)[0] + ".tac"
+    archivo_ll  = os.path.splitext(archivo_entrada)[0] + ".ll"
 
     print(f"--- Iniciando Pipeline para: {archivo_entrada} ---")
 
@@ -101,6 +103,18 @@ def run_pipeline(archivo_entrada):
             #print(tac_gen.get_tac())
             #print("---")
             
+        # 5. Fase LLVM IR
+        with medir_fase("Fase LLVM IR", metricas):
+            ir_gen = IRGenerator()
+            ir_gen.visit(tree)
+
+            if ir_gen.verify():
+                ir_gen.save(archivo_ll)
+                print(f"\n--- LLVM IR generado → {archivo_ll} ---")
+                print(f"    Ejecutar con: lli {archivo_ll}")
+            else:
+                print("\n[ADVERTENCIA] El IR generado no pasó la verificación LLVM.")
+                print("             El pipeline continúa pero el .ll puede no ser ejecutable.")
 
         # 5. Fase de Intérprete
         with medir_fase("Fase de Intérprete", metricas):

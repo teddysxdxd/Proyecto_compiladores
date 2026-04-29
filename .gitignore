@@ -9,3 +9,5 @@
 /.antlr
 *.dot
 *.png
+*.ll
+*.tac
