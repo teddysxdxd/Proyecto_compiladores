@@ -463,18 +463,34 @@ class IRGenerator(CalculadoraVisitor):
     def _arith(self, left: ir.Value, right: ir.Value, op: str) -> ir.Value:
         # Promoción a float si alguno lo es
         if left.type == FLOAT or right.type == FLOAT:
-            left  = self._coerce(left,  FLOAT)
+            left  = self._coerce(left, FLOAT)
             right = self._coerce(right, FLOAT)
-            ops = {"+": self.builder.fadd, "-": self.builder.fsub,
-                   "*": self.builder.fmul, "/": self.builder.fdiv}
+
+            ops = {
+                "+": self.builder.fadd,
+                "-": self.builder.fsub,
+                "*": self.builder.fmul,
+                "/": self.builder.fdiv,
+                "%": self.builder.frem
+            }
+
             return ops[op](left, right)
+
         # Enteros
-        left  = self._coerce(left,  INT)
+        left  = self._coerce(left, INT)
         right = self._coerce(right, INT)
-        ops = {"+": self.builder.add,  "-": self.builder.sub,
-               "*": self.builder.mul,  "/": self.builder.sdiv}
+
+        ops = {
+            "+": self.builder.add,
+            "-": self.builder.sub,
+            "*": self.builder.mul,
+            "/": self.builder.sdiv,
+            "%": self.builder.srem
+        }
+
         return ops[op](left, right)
 
+        
     def _cmp(self, left: ir.Value, right: ir.Value, op: str) -> ir.Value:
         norm = {"<>": "!="}
         op = norm.get(op, op)
@@ -490,7 +506,7 @@ class IRGenerator(CalculadoraVisitor):
         right = self._coerce(right, INT)
         return self.builder.icmp_signed(op, left, right)
 
-    def visitMultiplicacionDivisision(self, ctx: CalculadoraParser.MultiplicacionDivisisionContext):
+    def visitMultiplicacionDivisisionMod(self, ctx: CalculadoraParser.MultiplicacionDivisisionModContext):
         return self._arith(self.visit(ctx.expresion(0)),
                            self.visit(ctx.expresion(1)), ctx.op.text)
 
@@ -503,13 +519,49 @@ class IRGenerator(CalculadoraVisitor):
                          self.visit(ctx.expresion(1)), ctx.op.text)
 
     def visitAndOrLogico(self, ctx: CalculadoraParser.AndOrLogicoContext):
-        left  = self._coerce(self.visit(ctx.expresion(0)), BOOL)
-        right = self._coerce(self.visit(ctx.expresion(1)), BOOL)
+        left  = self.visit(ctx.expresion(0))
+        right = self.visit(ctx.expresion(1))
+        if left is None:
+            left = ir.Constant(BOOL, 0)
+        if right is None:
+            right = ir.Constant(BOOL, 0)
+        left  = self._coerce(left, BOOL)
+        right = self._coerce(right, BOOL)
         if ctx.op.text == "&&":
             return self.builder.and_(left, right)
         return self.builder.or_(left, right)
 
-    def visitLlamadaFuncion(self, ctx: CalculadoraParser.LlamadaFuncionContext):
+    def visitLlamadaModulo(self, ctx: CalculadoraParser.LlamadaModuloContext):
+        modulo = ctx.ID(0).getText()
+        funcion = ctx.ID(1).getText()
+        
+        # Soportar módulo math con funciones básicas
+        if modulo == "math":
+            if funcion in ["sqrt", "pow", "sin", "cos"]:
+                if funcion == "sqrt":
+                    fn_ty = ir.FunctionType(FLOAT, [FLOAT])
+                    fn = ir.Function(self.module, fn_ty, name="sqrt")
+                    args = [self.visit(e) for e in ctx.expresion()]
+                    if args and args[0] is not None:
+                        args[0] = self._coerce(args[0], FLOAT)
+                        return self.builder.call(fn, [args[0]])
+                elif funcion == "pow":
+                    fn_ty = ir.FunctionType(FLOAT, [FLOAT, FLOAT])
+                    fn = ir.Function(self.module, fn_ty, name="pow")
+                    args = [self.visit(e) for e in ctx.expresion()]
+                    if len(args) >= 2 and args[0] is not None and args[1] is not None:
+                        args[0] = self._coerce(args[0], FLOAT)
+                        args[1] = self._coerce(args[1], FLOAT)
+                        return self.builder.call(fn, args[:2])
+                elif funcion in ["sin", "cos"]:
+                    fn_ty = ir.FunctionType(FLOAT, [FLOAT])
+                    fn = ir.Function(self.module, fn_ty, name=funcion)
+                    args = [self.visit(e) for e in ctx.expresion()]
+                    if args and args[0] is not None:
+                        args[0] = self._coerce(args[0], FLOAT)
+                        return self.builder.call(fn, [args[0]])
+        
+        return ir.Constant(FLOAT, 0.0)
         name = ctx.ID().getText()
         if name not in self.functions:
             return ir.Constant(INT, 0)
@@ -520,12 +572,16 @@ class IRGenerator(CalculadoraVisitor):
         if ctx.args():
             for i, expr in enumerate(ctx.args().expresion()):
                 val = self.visit(expr)
+                if val is None:
+                    val = ir.Constant(INT, 0)
                 if i < len(fn.args):
                     val = self._coerce(val, fn.args[i].type)
                 args.append(val)
 
         result = self.builder.call(fn, args)
-        return None if ret_tipo == "void" else result
+        if ret_tipo == "void":
+            return ir.Constant(INT, 0)
+        return result if result is not None else ir.Constant(INT, 0)
 
     # ── API pública ───────────────────────────────────────────────
 

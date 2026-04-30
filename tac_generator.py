@@ -215,7 +215,7 @@ class TACGenerator(CalculadoraVisitor):
         self._emit(f"{tmp} = !{operand}")
         return tmp
 
-    def visitMultiplicacionDivisision(self, ctx: CalculadoraParser.MultiplicacionDivisisionContext):
+    def visitMultiplicacionDivisisionMod(self, ctx: CalculadoraParser.MultiplicacionDivisisionModContext):
         left  = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
         tmp   = self._new_temp()
@@ -258,4 +258,20 @@ class TACGenerator(CalculadoraVisitor):
 
         tmp = self._new_temp()
         self._emit(f"{tmp} = call {name}, {len(args)}")
+        return tmp
+
+    def visitLlamadaModulo(self, ctx):
+        modulo  = ctx.ID(0).getText()
+        funcion = ctx.ID(1).getText()
+        nombre  = f"{modulo}.{funcion}"
+
+        args = []
+        for expr in ctx.expresion():
+            args.append(self.visit(expr))
+
+        for arg in args:
+            self._emit(f"param {arg}")
+
+        tmp = self._new_temp()
+        self._emit(f"{tmp} = call {nombre}, {len(args)}")
         return tmp
