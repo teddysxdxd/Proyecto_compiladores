@@ -187,6 +187,6 @@ def run_pipeline_stream(archivo_entrada, callback_linea=None):
 
 
 if __name__ == '__main__':
-    from interfaz import CompiladorApp
+    from ui_compiler import CompiladorApp
     app = CompiladorApp(seleccionar_archivo, run_pipeline_stream)
     app.run()
