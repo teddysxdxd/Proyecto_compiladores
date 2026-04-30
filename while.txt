@@ -1,0 +1,13 @@
+Program
+   int x = 0
+    while (x < 10) {
+        x = x + 1
+        simon (x == 3) {
+            continue
+        }
+        print(x)
+        simon (x == 7) {
+            break
+        }
+    }
+End_Program
