@@ -78,6 +78,27 @@ class InterpreterVisitor(CalculadoraVisitor):
         self.symbol_table.pop_scope()
         return resultado
 
+    def visitLlamadaModulo(self, ctx):
+        import math
+        modulo = ctx.ID(0).getText()   # ej: "math"
+        funcion = ctx.ID(1).getText()  # ej: "sqrt"
+        
+        args = [self.visit(expr) for expr in ctx.expresion()]
+        
+        modulos_permitidos = {
+            "math": math,
+        }
+        
+        if modulo not in modulos_permitidos:
+            raise Exception(f"Módulo '{modulo}' no reconocido")
+        
+        mod = modulos_permitidos[modulo]
+        
+        if not hasattr(mod, funcion):
+            raise Exception(f"Función '{funcion}' no existe en módulo '{modulo}'")
+        
+        return getattr(mod, funcion)(*args)
+
     def visitInstruccionReturn(self, ctx):
         return self.visit(ctx.returnStmt().expresion()) if ctx.returnStmt().expresion() else None
 

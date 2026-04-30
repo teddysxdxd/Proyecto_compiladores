@@ -259,3 +259,19 @@ class TACGenerator(CalculadoraVisitor):
         tmp = self._new_temp()
         self._emit(f"{tmp} = call {name}, {len(args)}")
         return tmp
+
+    def visitLlamadaModulo(self, ctx):
+        modulo  = ctx.ID(0).getText()
+        funcion = ctx.ID(1).getText()
+        nombre  = f"{modulo}.{funcion}"
+
+        args = []
+        for expr in ctx.expresion():
+            args.append(self.visit(expr))
+
+        for arg in args:
+            self._emit(f"param {arg}")
+
+        tmp = self._new_temp()
+        self._emit(f"{tmp} = call {nombre}, {len(args)}")
+        return tmp
