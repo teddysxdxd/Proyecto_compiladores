@@ -215,7 +215,7 @@ class TACGenerator(CalculadoraVisitor):
         self._emit(f"{tmp} = !{operand}")
         return tmp
 
-    def visitMultiplicacionDivisision(self, ctx: CalculadoraParser.MultiplicacionDivisisionContext):
+    def visitMultiplicacionDivisisionMod(self, ctx: CalculadoraParser.MultiplicacionDivisisionModContext):
         left  = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
         tmp   = self._new_temp()

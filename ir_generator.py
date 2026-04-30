@@ -490,7 +490,7 @@ class IRGenerator(CalculadoraVisitor):
         right = self._coerce(right, INT)
         return self.builder.icmp_signed(op, left, right)
 
-    def visitMultiplicacionDivisision(self, ctx: CalculadoraParser.MultiplicacionDivisisionContext):
+    def visitMultiplicacionDivisisionMod(self, ctx: CalculadoraParser.MultiplicacionDivisisionModContext):
         return self._arith(self.visit(ctx.expresion(0)),
                            self.visit(ctx.expresion(1)), ctx.op.text)
 

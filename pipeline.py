@@ -120,7 +120,7 @@ def run_pipeline(archivo_entrada):
             print("-" * 30)
             print("Programa finalizado con éxito.")
 
-        # 7. Compiler externo (🔥 AQUÍ ESTABA EL PROBLEMA)
+        # 7. Compiler externo
         with medir_fase("Fase Compiler.py", metricas):
             print(f"Procesando archivo: {archivo_entrada}\n")
 
