@@ -51,24 +51,27 @@ El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, v
 ```
 Proyecto_compiladores/
 │
-├── .antlr/                 # Archivos temporales de ANTLR
-├── venv/                   # Entorno virtual de Python
-├── Calculadora.g4          # Gramática principal (Lexer + Parser)
-├── compiler.py             # Script principal del compilador
+├── .antlr/						 # Archivos temporales de ANTLR
+├── venv/						# Entorno virtual de Python
+├── Calculadora.g4			# Gramática principal (Lexer + Parser)
+├── compiler.py					# Script principal del compilador
 ├── interpreter_visitor.py  # Lógica del intérprete (Visitor)
 ├── semantic_visitor.py     # Verificación de reglas semánticas
 ├── symbol_table.py         # Gestión de tabla de símbolos
 ├── custom_errors.py        # Manejo de errores personalizados
-├── pipeline.py             # Flujo de ejecución del proyecto
+├── pipeline.py					# Flujo de ejecución del proyecto
 ├── operaciones.txt         # Archivo de entrada con código fuente
 ├── arbol_ast.png           # Visualización del árbol generado
-├── readme.md               # Documentación del proyecto
-└── .gitignore              # Archivos excluidos de Git
+├── ir_generator.py			# traduce el modulo LLVM IR 
+├── ui_compiler.py		    #  interfaz de compilación grafica
+├── tac_generator.py      # Recorre el AST generado y emite codigo en tres direcciones
+├── readme.md              # Documentación del proyecto
+└── .gitignore                 # Archivos excluidos de Git
 
 ```
 
 > ⚙️ Al ejecutar `antlr4`, se generan automáticamente los siguientes archivos (no subir al repo):
-> `CalculadoraLexer.py`, `CalculadoraParser.py`, `CalculadoraVisitor.py`, `CalculadoraListener.py`
+> `CalculadoraLexer.py`, `CalculadoraParser.py`, `CalculadoraVisitor.py`, `CalculadoraListener.py` `operaciones.ll` `operaciones.tac` 
 
 ---
 
@@ -139,7 +142,7 @@ Esto generará dos archivos los cuales tienen de nombre `arbol.dot` y `arbol_ast
 ```bash
 sudo apt install python3-tk
 sudo pip install llvmlite
-sudo pip install textual 
+sudo pip install textual
 sudo pip install rich
 ```
 
