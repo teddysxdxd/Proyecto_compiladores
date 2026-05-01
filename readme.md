@@ -13,6 +13,7 @@
 ## 📋 Tabla de Contenidos
 
 - [¿Qué es este proyecto?](#-qué-es-este-proyecto)
+- [Novedades del Proyecto 2](#-novedades-del-proyecto-2)
 - [Características del lenguaje](#-características-del-lenguaje)
 - [Estructura del proyecto](#-estructura-del-proyecto)
 - [Requisitos previos](#-requisitos-previos)
@@ -20,7 +21,6 @@
 - [Sintaxis del lenguaje](#-sintaxis-del-lenguaje)
 - [Ejemplos de uso](#-ejemplos-de-uso)
 - [Gramática (resumen)](#-gramática-resumen)
-- [Colaboradores](#-colaboradores)
 
 ---
 
@@ -28,6 +28,43 @@
 
 Este proyecto implementa un **intérprete** para un lenguaje de programación personalizado usando el generador de parsers **ANTLR4** con runtime de Python.  
 El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, variables, estructuras condicionales (`simon` / `sinel`) y bloques de código.
+
+---
+
+## 🚀 Novedades del Proyecto 2
+
+El proyecto evolucionó a un modelo más cercano a un compilador formal:
+
+### 🔄 Pipeline de Ejecución
+Se implementó un flujo obligatorio de validación:
+
+```
+Léxico → Sintáctico → Semántico → Intérprete
+```
+
+Esto garantiza que el código sea válido antes de ejecutarse.
+
+### 🧠 Análisis Semántico
+- Validación de tipos
+- Verificación de variables declaradas
+- Validación de funciones (parámetros y retorno)
+
+### 🗂️ Manejo de Scopes (Ámbitos)
+- Implementado con **pila de tablas hash (dicts en Python)**
+- Soporta:
+  - Scope global
+  - Scopes locales (funciones y bloques)
+- Acceso eficiente en tiempo **O(1)**
+
+### 🔁 Funciones
+- Declaración con parámetros tipados
+- Retorno obligatorio
+- Soporte para **recursividad**
+
+### ❌ Manejo de Errores
+- Errores léxicos, sintácticos y semánticos
+- Reporte detallado con línea y columna
+- Implementado en `custom_errors.py`
 
 ---
 
@@ -42,7 +79,8 @@ El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, v
 | Condicional | `simon ( condición ) { }` / `sinel { }` |
 | I/O | `print( expresión )` |
 | Delimitadores | `Program` … `End_Program` |
-| Tipos | Números enteros y decimales, cadenas de texto `"..."` |
+| Tipos | `int`, `float`, `string`, `bool` |
+| Funciones | Declaración, parámetros y retorno |
 
 ---
 
@@ -51,24 +89,29 @@ El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, v
 ```
 Proyecto_compiladores/
 │
-├── .antlr/                 # Archivos temporales de ANTLR
-├── venv/                   # Entorno virtual de Python
-├── Calculadora.g4          # Gramática principal (Lexer + Parser)
-├── compiler.py             # Script principal del compilador
+├── .antlr/						 # Archivos temporales de ANTLR
+├── venv/						# Entorno virtual de Python
+├── Calculadora.g4			# Gramática principal (Lexer + Parser)
+├── compiler.py					# Script principal del compilador
 ├── interpreter_visitor.py  # Lógica del intérprete (Visitor)
 ├── semantic_visitor.py     # Verificación de reglas semánticas
-├── symbol_table.py         # Gestión de tabla de símbolos
+├── symbol_table.py         # Gestión de tabla de símbolos (scopes)
 ├── custom_errors.py        # Manejo de errores personalizados
-├── pipeline.py             # Flujo de ejecución del proyecto
+├── pipeline.py					# Flujo de ejecución del proyecto
 ├── operaciones.txt         # Archivo de entrada con código fuente
 ├── arbol_ast.png           # Visualización del árbol generado
 ├── readme.md               # Documentación del proyecto
-└── .gitignore              # Archivos excluidos de Git
+└── .gitignore
+├── ir_generator.py			# traduce el modulo LLVM IR 
+├── ui_compiler.py		    #  interfaz de compilación grafica
+├── tac_generator.py      # Recorre el AST generado y emite codigo en tres direcciones
+├── readme.md              # Documentación del proyecto
+└── .gitignore                 # Archivos excluidos de Git
 
 ```
 
 > ⚙️ Al ejecutar `antlr4`, se generan automáticamente los siguientes archivos (no subir al repo):
-> `CalculadoraLexer.py`, `CalculadoraParser.py`, `CalculadoraVisitor.py`, `CalculadoraListener.py`
+> `CalculadoraLexer.py`, `CalculadoraParser.py`, `CalculadoraVisitor.py`, `CalculadoraListener.py` `operaciones.ll` `operaciones.tac` 
 
 ---
 
@@ -103,15 +146,9 @@ git checkout desarrollo
 ### Paso 2 — Crear y activar el entorno virtual
 
 ```bash
-# Crear entorno virtual
 python3 -m venv venv
-
-# Activar (Linux / macOS)
 source venv/bin/activate
-
 ```
-
-> 💡 Sabrás que está activo cuando el prompt muestre `(venv)` al inicio.
 
 ### Paso 3 — Instalar dependencias
 
@@ -125,21 +162,19 @@ pip install antlr4-python3-runtime
 antlr4 -Dlanguage=Python3 -visitor -no-listener Calculadora.g4
 ```
 
-Esto genera los archivos `CalculadoraLexer.py`, `CalculadoraParser.py`, etc.
-
-## Paso 5 - Instalar dependencias de graphviz
+### Paso 5 — Instalar Graphviz
 
 ```bash
 sudo apt install graphviz
 ```
-Esto generará dos archivos los cuales tienen de nombre `arbol.dot` y `arbol_ast.png`
 
+### Paso 6 — Ejecutar el proyecto (pipeline recomendado)
 ## Paso 6 - Instalacion de Tkinter, llvmlite, textual & rich
 
 ```bash
 sudo apt install python3-tk
 sudo pip install llvmlite
-sudo pip install textual 
+sudo pip install textual
 sudo pip install rich
 ```
 
@@ -167,16 +202,14 @@ End_Program
 
 ```
 Program
-    x = 10
-    y = 3.5
+    int x = 10
+    float y = 3.5
     resultado = x + y * 2
     print(resultado)
 End_Program
 ```
 
 ### Condicional — `simon` / `sinel`
-
-> La palabra clave `simon` equivale a `if`, y `sinel` equivale a `else`.
 
 ```
 Program
@@ -189,15 +222,20 @@ Program
 End_Program
 ```
 
-### Operadores lógicos
+### Funciones y recursividad
 
 ```
 Program
-    a = 1
-    b = 0
-    simon (a == 1 && b == 0) {
-        print("condicion verdadera")
+    int factorial(int n) {
+        simon (n <= 1) {
+            return 1
+        } sinel {
+            return n * factorial(n - 1)
+        }
     }
+
+    int res = factorial(5)
+    print("Factorial: " + res)
 End_Program
 ```
 
@@ -216,13 +254,6 @@ Program
 End_Program
 ```
 
-**Salida esperada:**
-```
-8
-5.0
-21
-```
-
 </details>
 
 <details>
@@ -239,27 +270,6 @@ Program
 End_Program
 ```
 
-**Salida esperada:**
-```
-Mayor de edad
-```
-
-</details>
-
-<details>
-<summary><strong>Ejemplo 3 — Operadores lógicos y negación</strong></summary>
-
-```
-Program
-    activo = 1
-    simon (!activo == 1) {
-        print("inactivo")
-    } sinel {
-        print("activo")
-    }
-End_Program
-```
-
 </details>
 
 ---
@@ -270,7 +280,7 @@ El lenguaje es definido en `Calculadora.g4`. Su estructura principal:
 
 ```
 archivo → INICIOPROGRAMA instrucciones* FINPROGRAMA
-instruccion → expresión | asignación | print | if | bloque
+instruccion → expresión | asignación | print | if | bloque | función
 ifStatement → simon ( expresión ) bloque ( sinel bloque )?
 expresion → número | cadena | variable | operación aritmética | operación lógica
 ```
@@ -278,6 +288,7 @@ expresion → número | cadena | variable | operación aritmética | operación 
 <details>
 <summary><strong>Ver gramática completa</strong></summary>
 
+```antlr
 ```antlr
 grammar Calculadora;
 
@@ -333,7 +344,5 @@ NEWLINE : '\r'? '\n' ;
 WS      : [ \t]+ -> skip ;
 ```
 
+
 </details>
-
-
-
