@@ -125,7 +125,7 @@ def run_pipeline(archivo_entrada):
             print(f"Procesando archivo: {archivo_entrada}\n")
 
             result = subprocess.run(
-                ["python3", "compiler.py", archivo_entrada],
+                [sys.executable, "compiler.py", archivo_entrada],
                 capture_output=True,
                 text=True
             )

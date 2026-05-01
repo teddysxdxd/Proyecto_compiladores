@@ -248,6 +248,7 @@ class EvaluarVisitante(CalculadoraVisitor):
         if ctx.op.text == '%':
             return izq % der if der != 0 else 0
         return izq / der if der != 0 else 0
+        
     def visitSumaResta(self, ctx):
         izq = self.visit(ctx.expresion(0))
         der = self.visit(ctx.expresion(1))
