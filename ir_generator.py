@@ -531,6 +531,28 @@ class IRGenerator(CalculadoraVisitor):
             return self.builder.and_(left, right)
         return self.builder.or_(left, right)
 
+    def visitLlamadaFuncion(self, ctx: CalculadoraParser.LlamadaFuncionContext):
+        name = ctx.ID().getText()
+        if name not in self.functions:
+            return ir.Constant(INT, 0)
+
+        fn, ret_tipo = self.functions[name]
+        args = []
+
+        if ctx.args():
+            for i, expr in enumerate(ctx.args().expresion()):
+                val = self.visit(expr)
+                if val is None:
+                    val = ir.Constant(INT, 0)
+                if i < len(fn.args):
+                    val = self._coerce(val, fn.args[i].type)
+                args.append(val)
+
+        result = self.builder.call(fn, args)
+        if ret_tipo == "void":
+            return ir.Constant(INT, 0)
+        return result if result is not None else ir.Constant(INT, 0)
+
     def visitLlamadaModulo(self, ctx: CalculadoraParser.LlamadaModuloContext):
         modulo = ctx.ID(0).getText()
         funcion = ctx.ID(1).getText()
@@ -560,23 +582,8 @@ class IRGenerator(CalculadoraVisitor):
                     if args and args[0] is not None:
                         args[0] = self._coerce(args[0], FLOAT)
                         return self.builder.call(fn, [args[0]])
-        
+
         return ir.Constant(FLOAT, 0.0)
-        name = ctx.ID().getText()
-        if name not in self.functions:
-            return ir.Constant(INT, 0)
-
-        fn, ret_tipo = self.functions[name]
-
-        args = []
-        if ctx.args():
-            for i, expr in enumerate(ctx.args().expresion()):
-                val = self.visit(expr)
-                if val is None:
-                    val = ir.Constant(INT, 0)
-                if i < len(fn.args):
-                    val = self._coerce(val, fn.args[i].type)
-                args.append(val)
 
         result = self.builder.call(fn, args)
         if ret_tipo == "void":

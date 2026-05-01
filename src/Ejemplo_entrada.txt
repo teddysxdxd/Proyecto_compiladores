@@ -1,0 +1,54 @@
+Program
+    int n0 = 3
+    int n1 = 1
+    int n2 = 4
+    int n3 = 1
+    int n4 = 5
+
+    int total = 0
+    int i = 0
+
+    while (i < 5) {
+        int r = 0
+
+        simon (i == 0) { r = n0 % 2 }
+        sinel {
+            simon (i == 1) { r = n1 % 2 }
+            sinel {
+                simon (i == 2) { r = n2 % 2 }
+                sinel {
+                    simon (i == 3) { r = n3 % 2 }
+                    sinel { r = n4 % 2 }
+                }
+            }
+        }
+
+        simon (r == 0) {
+            simon (i == 0) { total = total + n0 }
+            sinel {
+                simon (i == 1) { total = total + n1 }
+                sinel {
+                    simon (i == 2) { total = total + n2 }
+                    sinel {
+                        simon (i == 3) { total = total + n3 }
+                        sinel { total = total + n4 }
+                    }
+                }
+            }
+        }
+
+        i = i + 1
+        simon (total > 10) { break }
+    }
+
+    int fibonacci(int n) {
+        simon (n <= 1) { return n }
+        return fibonacci(n - 1) + fibonacci(n - 2)
+    }
+
+    string msg = "Fibonacci(15) = "
+    print(msg)
+    print(fibonacci(15))
+    print("Total pares: ")
+    print(total)
+End_Program
