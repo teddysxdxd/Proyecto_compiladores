@@ -1,7 +1,9 @@
 grammar Calculadora;
 
 // El archivo ahora es un bloque Program/End_Program
-archivo : INICIOPROGRAMA instruccion* FINPROGRAMA EOF ;
+archivo : importStatement* INICIOPROGRAMA instruccion* FINPROGRAMA EOF;
+
+importStatement : IMPORT ID;
 
 instruccion : declaracion           # InstruccionDeclaracion
             | asignacion            # EjecutarAsignacion
@@ -12,6 +14,8 @@ instruccion : declaracion           # InstruccionDeclaracion
             | returnStmt            # InstruccionReturn
             | funcionDecl           # InstruccionFuncion
             | expresion             # InstruccionExpresion
+            | BREAK           # BreakStmt
+            | CONTINUE        # ContinueStmt
             | block                 # InstruccionBloque
             ;
 
@@ -37,9 +41,10 @@ expresion : PARENTESISI expresion PARENTESISD # Parentesis
           | STRING                            # Cadena
           | BOOLEANO                          # Booleano
           | ID PARENTESISI (args)? PARENTESISD # LlamadaFuncion
+          | ID PUNTO ID PARENTESISI (expresion (COMA expresion)*)? PARENTESISD # LlamadaModulo
           | ID                                # Variable
           | NOTLOGICO expresion               # NotLogico
-          | expresion op=(MULT|DIV) expresion # MultiplicacionDivisision
+          | expresion op=(MULT|DIV|MOD) expresion # MultiplicacionDivisisionMod
           | expresion op=(SUM|REST) expresion # SumaResta
           | expresion op=(IGUALA|DIFERENTEA|DIFERENTEA2|MENORQUE|MAYORQUE|MENORIGUAL|MAYORIGUAL) expresion # Relacional
           | expresion op=(AND|OR) expresion   # AndOrLogico
@@ -48,6 +53,7 @@ expresion : PARENTESISI expresion PARENTESISD # Parentesis
 args : expresion (',' expresion)* ;
 
 // Lexer Rules
+IMPORT   : 'import';
 TIPO    : 'int' | 'float' | 'string' | 'bool' | 'void' ;
 INICIOPROGRAMA: 'Program';
 FINPROGRAMA: 'End_Program';
@@ -57,6 +63,8 @@ BLOCKF  : '}';
 IFINICIO: 'simon';
 ELSE    : 'sinel';
 WHILE   : 'while';
+BREAK    : 'break';
+CONTINUE : 'continue';
 FOR     : 'for';
 RETURN  : 'return';
 PARENTESISI: '(';
@@ -66,6 +74,7 @@ CORCHD  : ']';
 BOOLEANO: 'true' | 'false';
 NOTLOGICO : '!';
 MULT    : '*';
+MOD : '%';
 DIV     : '/';
 SUM     : '+';
 REST    : '-';
@@ -78,6 +87,8 @@ MENORIGUAL: '<=';
 MAYORIGUAL: '>=';
 AND : '&&';
 OR  : '||' ;
+COMA : ',';
+PUNTO: '.';
 
 NUMERO  : '-'? [0-9]+ ('.' [0-9]+)? ;
 STRING  : '"' .*? '"' ;

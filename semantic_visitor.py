@@ -146,6 +146,63 @@ class SemanticVisitor(CalculadoraVisitor):
         self.visit(ctx.expresion(1))
         return "bool"
 
+    def visitMultiplicacionDivisisionMod(self, ctx):
+        t1 = self.visit(ctx.expresion(0))
+        t2 = self.visit(ctx.expresion(1))
+        
+        # Validar que ambas sean numéricas
+        if t1 not in ["int", "float"] or t2 not in ["int", "float"]:
+            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: No se puede realizar operación aritmética con tipos no numéricos.")
+            return "unknown"
+        
+        return "float" if t1 == "float" or t2 == "float" else "int"
+
+    def visitAndOrLogico(self, ctx):
+        self.visit(ctx.expresion(0))
+        self.visit(ctx.expresion(1))
+        return "bool"
+
+    def visitNotLogico(self, ctx):
+        self.visit(ctx.expresion())
+        return "bool"
+
+    def visitInstruccionBloque(self, ctx):
+        self.visit(ctx.block())
+        return None
+
+    def visitInstruccionFor(self, ctx):
+        self.visit(ctx.forStatement())
+        return None
+
+    def visitForStatement(self, ctx):
+        # Crear scope para el for
+        self.symbol_table.push_scope()
+        
+        # Primera asignación (inicialización)
+        self.visit(ctx.asignacion(0))
+        
+        # Condición
+        self.visit(ctx.expresion())
+        
+        # Bloque
+        self.visit(ctx.block())
+        
+        # Segunda asignación (incremento)
+        self.visit(ctx.asignacion(1))
+        
+        self.symbol_table.pop_scope()
+        return None
+
+    def visitBreakStmt(self, ctx):
+        return None
+
+    def visitContinueStmt(self, ctx):
+        return None
+
+    def visitInstruccionExpresion(self, ctx):
+        self.visit(ctx.expresion())
+        return None
+
     def visitEjecutarPrint(self, ctx):
         self.visit(ctx.expresion())
         return None
@@ -157,3 +214,19 @@ class SemanticVisitor(CalculadoraVisitor):
             return self.visit(expr)   # return con valor
         else:
             return None              # return vacío
+
+    def visitLlamadaModulo(self, ctx):
+        modulo = ctx.ID(0).getText()
+        funcion = ctx.ID(1).getText()
+        
+        # Validar que el módulo sea conocido
+        if modulo == "math":
+            # Funciones del módulo math devuelven float
+            if funcion in ["sqrt", "pow", "sin", "cos"]:
+                return "float"
+            else:
+                self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Función '{funcion}' no existe en módulo '{modulo}'.")
+                return "unknown"
+        else:
+            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Módulo '{modulo}' no reconocido.")
+            return "unknown"

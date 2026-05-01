@@ -4,7 +4,7 @@ from symbol_table import SymbolTable
 class InterpreterVisitor(CalculadoraVisitor):
     def __init__(self):
         self.symbol_table = SymbolTable()
-        self.funciones = {} # Diccionario para guardar el cuerpo de las funciones
+        self.funciones = {} 
 
     def visitArchivo(self, ctx):
         for inst in ctx.instruccion():
@@ -22,13 +22,19 @@ class InterpreterVisitor(CalculadoraVisitor):
     def visitInstruccionAsignacion(self, ctx):
         nombre = ctx.asignacion().ID().getText()
         valor = self.visit(ctx.asignacion().expresion())
+        # IMPORTANTE: assign debe actualizar el valor en la Tabla Hash
         self.symbol_table.assign(nombre, valor)
         return valor
 
     # --- Estructuras de Control ---
     def visitWhileStatement(self, ctx):
+        # El while debe re-evaluar la condición en cada vuelta
         while self.visit(ctx.expresion()):
-            self.visit(ctx.block())
+            # IMPORTANTE: No usamos visitBlock aquí para que el ciclo 
+            # trabaje sobre el mismo scope y pueda modificar las variables.
+            for inst in ctx.block().instruccion():
+                res = self.visit(inst)
+                if res is not None: return res # Por si hay un return dentro
         return None
 
     def visitInstruccionIf(self, ctx):
@@ -40,58 +46,69 @@ class InterpreterVisitor(CalculadoraVisitor):
         return None
 
     def visitBlock(self, ctx):
-        self.symbol_table.push_scope() # Manejo de Scopes [cite: 42]
+        self.symbol_table.push_scope() 
         for inst in ctx.instruccion():
-            self.visit(inst)
-        self.symbol_table.pop_scope() # Limpieza al salir [cite: 43]
+            res = self.visit(inst)
+            if res is not None: # Si hay un return, lo propagamos
+                self.symbol_table.pop_scope()
+                return res
+        self.symbol_table.pop_scope() 
         return None
 
-    # --- Funciones (Recursividad) ---
+    # --- Funciones ---
     def visitInstruccionFuncion(self, ctx):
         nombre = ctx.funcionDecl().ID().getText()
-        # Guardamos el contexto de la función para llamarla luego
         self.funciones[nombre] = ctx.funcionDecl()
         return None
 
     def visitLlamadaFuncion(self, ctx):
         nombre = ctx.ID().getText()
         func_ctx = self.funciones.get(nombre)
+        if not func_ctx: return None
         
-        # Evaluar argumentos
-        args_valores = []
-        if ctx.args():
-            args_valores = [self.visit(arg) for arg in ctx.args().expresion()]
-        
-        # Crear nuevo ámbito para la ejecución de la función
+        args_valores = [self.visit(arg) for arg in ctx.args().expresion()] if ctx.args() else []
         self.symbol_table.push_scope()
         
-        # Mapear parámetros a los valores de los argumentos
         params_ctx = func_ctx.params()
         if params_ctx:
             for i in range(len(args_valores)):
-                p_nombre = params_ctx.ID(i).getText()
-                p_tipo = params_ctx.TIPO(i).getText()
-                self.symbol_table.declare(p_nombre, p_tipo, args_valores[i])
+                self.symbol_table.declare(params_ctx.ID(i).getText(), params_ctx.TIPO(i).getText(), args_valores[i])
         
-        # Ejecutar el bloque y capturar el return (si existe)
         resultado = self.visit(func_ctx.block())
-        
         self.symbol_table.pop_scope()
         return resultado
 
-    def visitInstruccionReturn(self, ctx):
-        expr = ctx.returnStmt().expresion()
+    def visitLlamadaModulo(self, ctx):
+        import math
+        modulo = ctx.ID(0).getText()   # ej: "math"
+        funcion = ctx.ID(1).getText()  # ej: "sqrt"
         
-        if expr:
-            return self.visit(expr)   # return con valor
-        else:
-            return None              # return vacío
+        args = [self.visit(expr) for expr in ctx.expresion()]
+        
+        modulos_permitidos = {
+            "math": math,
+        }
+        
+        if modulo not in modulos_permitidos:
+            raise Exception(f"Módulo '{modulo}' no reconocido")
+        
+        mod = modulos_permitidos[modulo]
+        
+        if not hasattr(mod, funcion):
+            raise Exception(f"Función '{funcion}' no existe en módulo '{modulo}'")
+        
+        return getattr(mod, funcion)(*args)
+
+    def visitInstruccionReturn(self, ctx):
+        return self.visit(ctx.returnStmt().expresion()) if ctx.returnStmt().expresion() else None
 
     # --- Impresión ---
     def visitPrintStmt(self, ctx):
         res = self.visit(ctx.expresion())
         if isinstance(res, bool):
             print("verdadero" if res else "falso")
+        elif isinstance(res, str):
+            print(res.strip('"')) # Limpiamos las comillas al imprimir
         else:
             print(res)
         return None
@@ -99,11 +116,14 @@ class InterpreterVisitor(CalculadoraVisitor):
     # --- Expresiones ---
     def visitVariable(self, ctx):
         var = self.symbol_table.lookup(ctx.ID().getText())
-        return var['value'] if var else None
+        return var['value'] if var else 0
 
     def visitNumero(self, ctx):
         num = ctx.NUMERO().getText()
         return float(num) if "." in num else int(num)
+
+    def visitCadena(self, ctx):
+        return ctx.STRING().getText()
 
     def visitRelacional(self, ctx):
         izq = self.visit(ctx.expresion(0))
@@ -111,24 +131,21 @@ class InterpreterVisitor(CalculadoraVisitor):
         op = ctx.op.text
         if op == '==': return izq == der
         if op == '>': return izq > der
+        if op == '<': return izq < der
+        if op == '>=': return izq >= der
         if op == '<=': return izq <= der
-        # Agrega aquí los demás: !=, <, >= [cite: 19]
+        if op == '!=' or op == '<>': return izq != der
         return False
 
-def visitSumaResta(self, ctx):
-    izq = self.visit(ctx.expresion(0))
-    der = self.visit(ctx.expresion(1))
-    
-    # Concatenación si alguno es string
-    if isinstance(izq, str) or isinstance(der, str):
-        if ctx.op.text == '+':
-            # Convierte ambos a string y concatena
-            return str(izq) + str(der)
-        else:
-            raise RuntimeError(f"No se puede restar con strings: {izq} - {der}")
-    
-    # Suma/resta numérica normal
-    if ctx.op.text == '+':
-        return izq + der
-    else:
-        return izq - der
+    def visitSumaResta(self, ctx):
+        izq = self.visit(ctx.expresion(0))
+        der = self.visit(ctx.expresion(1))
+        
+        if isinstance(izq, str) or isinstance(der, str):
+            if ctx.op.text == '+':
+                # Limpiamos comillas antes de concatenar para que se vea bien
+                return str(izq).strip('"') + str(der).strip('"')
+            else:
+                raise RuntimeError(f"Error: Operación '{ctx.op.text}' no válida con strings")
+        
+        return (izq + der) if ctx.op.text == '+' else (izq - der)
