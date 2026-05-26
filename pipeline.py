@@ -15,6 +15,8 @@ from tac_generator import TACGenerator
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 from ir_generator import IRGenerator
+from optimizer import optimizar_ir_archivo_o3
+from binary_generator import generar_binarios_desde_ir
 
 
 @contextmanager
@@ -45,11 +47,13 @@ def imprimir_resumen(metricas):
     print("=" * 40)
 
 
-def run_pipeline(archivo_entrada):
+def run_pipeline(archivo_entrada, targets_fase8=("linux", "windows")):
     metricas = {}
 
     archivo_tac = os.path.splitext(archivo_entrada)[0] + ".tac"
     archivo_ll  = os.path.splitext(archivo_entrada)[0] + ".ll"
+    archivo_opt_ll = os.path.splitext(archivo_entrada)[0] + ".opt.ll"
+    base_binarios = os.path.splitext(archivo_entrada)[0]
 
     print(f"--- Iniciando Pipeline para: {archivo_entrada} ---")
 
@@ -97,12 +101,15 @@ def run_pipeline(archivo_entrada):
             tac_gen.visit(tree)
             tac_gen.save(archivo_tac)
 
+        ir_verificado = False
+
         # 5. Fase LLVM IR
         with medir_fase("Fase LLVM IR", metricas):
             ir_gen = IRGenerator()
             ir_gen.visit(tree)
 
             if ir_gen.verify():
+                ir_verificado = True
                 ir_gen.save(archivo_ll)
                 print(f"\n--- LLVM IR generado → {archivo_ll} ---")
                 print(f"    Ejecutar con: lli {archivo_ll}")
@@ -119,6 +126,51 @@ def run_pipeline(archivo_entrada):
 
             print("-" * 30)
             print("Programa finalizado con éxito.")
+
+        if not ir_verificado:
+            print("\n[STOP] Fases 7 y 8 omitidas: el IR de la Fase 5 no fue verificable.")
+            imprimir_resumen(metricas)
+            return
+
+        # 7. Optimización O3
+        with medir_fase("Fase 7 - Optimizer O3", metricas):
+            opt_result = optimizar_ir_archivo_o3(archivo_ll, archivo_opt_ll)
+
+            print(f"[O3] IR optimizado generado → {archivo_opt_ll}")
+            print(
+                f"[O3] Instrucciones: {opt_result['instrucciones_antes']} -> "
+                f"{opt_result['instrucciones_despues']} "
+                f"(reducción {opt_result['reduccion_porcentaje']:.2f}%)"
+            )
+
+            pases = opt_result.get("pases_detectados", [])
+            if pases:
+                print("[O3] Pases detectados (top):")
+                for p in pases[:10]:
+                    print(f"      - {p}")
+            else:
+                print("[O3] No se detectaron pases en el reporte de timing.")
+
+        # 8. Generación de binarios nativos
+        with medir_fase("Fase 8 - Generador de Binario Nativo", metricas):
+            resultados_bin = generar_binarios_desde_ir(
+                archivo_opt_ll,
+                base_binarios,
+                targets=targets_fase8,
+            )
+
+            for target, info in resultados_bin.items():
+                if info.get("ok"):
+                    print(
+                        f"[BIN-{target.upper()}] OK -> {info.get('binary_path')} "
+                        f"(obj: {info.get('object_path')})"
+                    )
+                else:
+                    print(f"[BIN-{target.upper()}] ERROR -> {info.get('error')}")
+                    if info.get("link_cmd"):
+                        print(f"    comando: {info.get('link_cmd')}")
+                    if info.get("stderr"):
+                        print(f"    stderr: {info.get('stderr')}")
 
         imprimir_resumen(metricas)
 
@@ -145,7 +197,7 @@ def seleccionar_archivo():
 
 
 # 🔥 STREAM (CONSOLA + INTERFAZ SIN ROMPER NADA)
-def run_pipeline_stream(archivo_entrada, callback_linea=None):
+def run_pipeline_stream(archivo_entrada, callback_linea=None, targets_fase8=("linux", "windows")):
 
     class Tee:
         def __init__(self, *streams):
@@ -165,7 +217,7 @@ def run_pipeline_stream(archivo_entrada, callback_linea=None):
     sys.stdout = Tee(sys.stdout)
 
     try:
-        run_pipeline(archivo_entrada)
+        run_pipeline(archivo_entrada, targets_fase8=targets_fase8)
     finally:
         sys.stdout = old_stdout
 
