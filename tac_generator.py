@@ -1,36 +1,18 @@
 # tac_generator.py
 # Generador de Código de Tres Direcciones (TAC)
-# Rama: desarrollo — compatible con Calculadora.g4 de esa rama
-#
-# Instrucciones TAC emitidas:
-#   t1 = a OP b          aritmética / relacional / lógica binaria
-#   t1 = !a              negación lógica
-#   VAR = t1             asignación
-#   print t1             salida estándar
-#   ifFalse t1 goto Ln   salto condicional (falso)
-#   goto Ln              salto incondicional
-#   Ln:                  etiqueta de destino
-#   param t1             argumento real (antes de call)
-#   t1 = call f, N       llamada con retorno
-#   call f, N            llamada sin captura de retorno
-#   begin_func f         apertura de función
-#   param_decl TIPO id   parámetro formal
-#   end_func f           cierre de función
-#   return t1            retorno con valor
-#   return               retorno vacío
 
 from CalculadoraParser import CalculadoraParser
 from CalculadoraVisitor import CalculadoraVisitor
 
 
 class TACGenerator(CalculadoraVisitor):
-
     def __init__(self):
         self.instructions = []
         self._temp_count = 0
         self._label_count = 0
+        self.struct_defs = {}
 
-    # ── helpers ────────────────────────────────────────────────────
+    # ---------------- helpers ----------------
     def _new_temp(self) -> str:
         self._temp_count += 1
         return f"t{self._temp_count}"
@@ -42,6 +24,9 @@ class TACGenerator(CalculadoraVisitor):
     def _emit(self, line: str):
         self.instructions.append(line)
 
+    def _lvalue_text(self, lvalue_ctx) -> str:
+        return ".".join(tok.getText() for tok in lvalue_ctx.ID())
+
     def get_tac(self) -> str:
         return "\n".join(self.instructions)
 
@@ -51,13 +36,13 @@ class TACGenerator(CalculadoraVisitor):
             f.write("\n")
         print(f"[TAC] Generado: {path}  ({len(self.instructions)} instrucciones)")
 
-    # ── programa raíz ──────────────────────────────────────────────
+    # ---------------- raíz ----------------
     def visitArchivo(self, ctx: CalculadoraParser.ArchivoContext):
         self._emit("; ===== TAC  —  inicio de programa =====")
         self.visitChildren(ctx)
         self._emit("; ===== TAC  —  fin de programa   =====")
 
-    # ── instrucciones (dispatch por label ANTLR) ───────────────────
+    # ---------------- dispatch de instrucciones ----------------
     def visitInstruccionDeclaracion(self, ctx):
         return self.visit(ctx.declaracion())
 
@@ -71,6 +56,9 @@ class TACGenerator(CalculadoraVisitor):
     def visitInstruccionIf(self, ctx):
         return self.visit(ctx.ifStatement())
 
+    def visitInstruccionSwitch(self, ctx):
+        return self.visit(ctx.switchStatement())
+
     def visitInstruccionWhile(self, ctx):
         return self.visit(ctx.whileStatement())
 
@@ -83,35 +71,71 @@ class TACGenerator(CalculadoraVisitor):
     def visitInstruccionFuncion(self, ctx):
         return self.visit(ctx.funcionDecl())
 
+    def visitInstruccionStruct(self, ctx):
+        return self.visit(ctx.structDecl())
+
     def visitInstruccionExpresion(self, ctx):
-        # Expresión usada como instrucción standalone: suma(10, 20)
-        # El TAC de la llamada ya se emite dentro de visitLlamadaFuncion.
         self.visit(ctx.expresion())
 
     def visitInstruccionBloque(self, ctx):
         return self.visit(ctx.block())
 
-    # ── declaración: TIPO ID (= expr)? ────────────────────────────
+    # ---------------- structs ----------------
+    def visitStructDecl(self, ctx: CalculadoraParser.StructDeclContext):
+        name = ctx.ID().getText()
+        fields = []
+        for fctx in ctx.structFieldDecl():
+            fields.append((fctx.TIPO().getText(), fctx.ID().getText()))
+        self.struct_defs[name] = fields
+
+        self._emit(f"; --- struct {name} ---")
+        for ftype, fname in fields:
+            self._emit(f"; field {ftype} {fname}")
+        self._emit(f"; --- end struct {name} ---")
+        return None
+
+    # ---------------- declaraciones ----------------
     def visitDeclaracion(self, ctx: CalculadoraParser.DeclaracionContext):
-        name = ctx.ID().getText()
-        if ctx.expresion():
-            val = self.visit(ctx.expresion())
-            self._emit(f"{name} = {val}")
-        else:
+        # TIPO ID (= expr)?
+        if ctx.TIPO():
+            name = ctx.ID(0).getText()
+            if ctx.expresion():
+                val = self.visit(ctx.expresion())
+                self._emit(f"{name} = {val}")
+            else:
+                defaults = {
+                    "int": "0",
+                    "float": "0.0",
+                    "string": '""',
+                    "bool": "false",
+                    "void": "0",
+                }
+                tipo = ctx.TIPO().getText()
+                self._emit(f"{name} = {defaults.get(tipo, '0')}")
+            return None
+
+        # ID ID  (variable struct)
+        struct_name = ctx.ID(0).getText()
+        var_name = ctx.ID(1).getText()
+        self._emit(f"{var_name} = struct {struct_name}")
+
+        for ftype, fname in self.struct_defs.get(struct_name, []):
             defaults = {
-                "int": "0", "float": "0.0",
-                "string": '""', "bool": "false", "void": "0"
+                "int": "0",
+                "float": "0.0",
+                "string": '""',
+                "bool": "false",
             }
-            tipo = ctx.TIPO().getText()
-            self._emit(f"{name} = {defaults.get(tipo, '0')}")
+            self._emit(f"{var_name}.{fname} = {defaults.get(ftype, '0')}")
+        return None
 
-    # ── asignación: ID = expr ──────────────────────────────────────
+    # ---------------- asignación ----------------
     def visitAsignacion(self, ctx: CalculadoraParser.AsignacionContext):
-        name = ctx.ID().getText()
+        left = self._lvalue_text(ctx.lvalue())
         val = self.visit(ctx.expresion())
-        self._emit(f"{name} = {val}")
+        self._emit(f"{left} = {val}")
+        return left
 
-    # ── return (expr)? ────────────────────────────────────────────
     def visitReturnStmt(self, ctx: CalculadoraParser.ReturnStmtContext):
         if ctx.expresion():
             val = self.visit(ctx.expresion())
@@ -119,9 +143,9 @@ class TACGenerator(CalculadoraVisitor):
         else:
             self._emit("return")
 
-    # ── función: TIPO ID(params?) block ───────────────────────────
+    # ---------------- función ----------------
     def visitFuncionDecl(self, ctx: CalculadoraParser.FuncionDeclContext):
-        name     = ctx.ID().getText()
+        name = ctx.ID().getText()
         ret_type = ctx.TIPO().getText()
         self._emit("")
         self._emit(f"; --- func {ret_type} {name} ---")
@@ -130,7 +154,7 @@ class TACGenerator(CalculadoraVisitor):
         if ctx.params():
             p = ctx.params()
             tipos = [t.getText() for t in p.TIPO()]
-            ids   = [i.getText() for i in p.ID()]
+            ids = [i.getText() for i in p.ID()]
             for t, pid in zip(tipos, ids):
                 self._emit(f"param_decl {t} {pid}")
 
@@ -138,13 +162,12 @@ class TACGenerator(CalculadoraVisitor):
         self._emit(f"end_func {name}")
         self._emit("")
 
-    # ── bloque: { instruccion* } ───────────────────────────────────
     def visitBlock(self, ctx: CalculadoraParser.BlockContext):
         self.visitChildren(ctx)
 
-    # ── if / if-else  (simon / sinel) ─────────────────────────────
+    # ---------------- if / switch / while / for ----------------
     def visitIfStatement(self, ctx: CalculadoraParser.IfStatementContext):
-        cond   = self.visit(ctx.expresion())
+        cond = self.visit(ctx.expresion())
         blocks = ctx.block()
 
         if len(blocks) == 1:
@@ -154,7 +177,7 @@ class TACGenerator(CalculadoraVisitor):
             self._emit(f"{l_end}:")
         else:
             l_else = self._new_label()
-            l_end  = self._new_label()
+            l_end = self._new_label()
             self._emit(f"ifFalse {cond} goto {l_else}")
             self.visit(blocks[0])
             self._emit(f"goto {l_end}")
@@ -162,10 +185,35 @@ class TACGenerator(CalculadoraVisitor):
             self.visit(blocks[1])
             self._emit(f"{l_end}:")
 
-    # ── while ─────────────────────────────────────────────────────
+    def visitSwitchStatement(self, ctx: CalculadoraParser.SwitchStatementContext):
+        ctrl = self.visit(ctx.expresion())
+        l_end = self._new_label()
+        next_case_label = self._new_label()
+
+        case_clauses = ctx.caseClause()
+        for idx, case_ctx in enumerate(case_clauses):
+            if idx == 0:
+                self._emit(f"{next_case_label}:")
+            case_val = self.visit(case_ctx.expresion())
+            cond = self._new_temp()
+            following = self._new_label()
+            self._emit(f"{cond} = {ctrl} == {case_val}")
+            self._emit(f"ifFalse {cond} goto {following}")
+
+            for inst in case_ctx.instruccion():
+                self.visit(inst)
+            self._emit(f"goto {l_end}")
+            self._emit(f"{following}:")
+
+        if ctx.defaultClause():
+            for inst in ctx.defaultClause().instruccion():
+                self.visit(inst)
+
+        self._emit(f"{l_end}:")
+
     def visitWhileStatement(self, ctx: CalculadoraParser.WhileStatementContext):
         l_start = self._new_label()
-        l_end   = self._new_label()
+        l_end = self._new_label()
         self._emit(f"{l_start}:")
         cond = self.visit(ctx.expresion())
         self._emit(f"ifFalse {cond} goto {l_end}")
@@ -173,22 +221,21 @@ class TACGenerator(CalculadoraVisitor):
         self._emit(f"goto {l_start}")
         self._emit(f"{l_end}:")
 
-    # ── for ───────────────────────────────────────────────────────
     def visitForStatement(self, ctx: CalculadoraParser.ForStatementContext):
-        asigs   = ctx.asignacion()  # [init, update]
+        asigs = ctx.asignacion()
         l_start = self._new_label()
-        l_end   = self._new_label()
+        l_end = self._new_label()
 
-        self.visit(asigs[0])        # init
+        self.visit(asigs[0])
         self._emit(f"{l_start}:")
         cond = self.visit(ctx.expresion())
         self._emit(f"ifFalse {cond} goto {l_end}")
         self.visit(ctx.block())
-        self.visit(asigs[1])        # update
+        self.visit(asigs[1])
         self._emit(f"goto {l_start}")
         self._emit(f"{l_end}:")
 
-    # ── expresiones ── cada una retorna el nombre del temp o literal
+    # ---------------- expresiones ----------------
     def visitNumero(self, ctx: CalculadoraParser.NumeroContext):
         return ctx.NUMERO().getText()
 
@@ -199,15 +246,20 @@ class TACGenerator(CalculadoraVisitor):
         return ctx.BOOLEANO().getText()
 
     def visitVariable(self, ctx: CalculadoraParser.VariableContext):
-        return ctx.ID().getText()
+        return self._lvalue_text(ctx.lvalue())
 
     def visitParentesis(self, ctx: CalculadoraParser.ParentesisContext):
-        # ( expr )  — transparente
         return self.visit(ctx.expresion())
 
     def visitCorchetes(self, ctx: CalculadoraParser.CorchetesContext):
-        # [ expr ]  — agrupación (ej. [x + 1]), transparente en TAC
         return self.visit(ctx.expresion())
+
+    def visitCastExplicito(self, ctx: CalculadoraParser.CastExplicitoContext):
+        val = self.visit(ctx.expresion())
+        dst = ctx.TIPO().getText()
+        tmp = self._new_temp()
+        self._emit(f"{tmp} = ({dst}) {val}")
+        return tmp
 
     def visitNotLogico(self, ctx: CalculadoraParser.NotLogicoContext):
         operand = self.visit(ctx.expresion())
@@ -216,36 +268,50 @@ class TACGenerator(CalculadoraVisitor):
         return tmp
 
     def visitMultiplicacionDivisisionMod(self, ctx: CalculadoraParser.MultiplicacionDivisisionModContext):
-        left  = self.visit(ctx.expresion(0))
+        left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
-        tmp   = self._new_temp()
+        tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
     def visitSumaResta(self, ctx: CalculadoraParser.SumaRestaContext):
-        left  = self.visit(ctx.expresion(0))
+        left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
-        tmp   = self._new_temp()
+        tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
     def visitRelacional(self, ctx: CalculadoraParser.RelacionalContext):
-        left  = self.visit(ctx.expresion(0))
+        left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
-        tmp   = self._new_temp()
+        tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
     def visitAndOrLogico(self, ctx: CalculadoraParser.AndOrLogicoContext):
-        left  = self.visit(ctx.expresion(0))
+        left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
-        tmp   = self._new_temp()
+        tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
-    # ── llamada a función: ID(args?) ──────────────────────────────
-    # Cubre tanto el caso con asignación (visitado desde otro visitor)
-    # como el caso standalone (visitado desde visitInstruccionExpresion).
+    def visitTernario(self, ctx: CalculadoraParser.TernarioContext):
+        cond = self.visit(ctx.expresion(0))
+        l_false = self._new_label()
+        l_end = self._new_label()
+        tmp = self._new_temp()
+
+        self._emit(f"ifFalse {cond} goto {l_false}")
+        true_val = self.visit(ctx.expresion(1))
+        self._emit(f"{tmp} = {true_val}")
+        self._emit(f"goto {l_end}")
+        self._emit(f"{l_false}:")
+        false_val = self.visit(ctx.expresion(2))
+        self._emit(f"{tmp} = {false_val}")
+        self._emit(f"{l_end}:")
+        return tmp
+
+    # ---------------- llamadas ----------------
     def visitLlamadaFuncion(self, ctx: CalculadoraParser.LlamadaFuncionContext):
         name = ctx.ID().getText()
         args = []
@@ -261,9 +327,9 @@ class TACGenerator(CalculadoraVisitor):
         return tmp
 
     def visitLlamadaModulo(self, ctx):
-        modulo  = ctx.ID(0).getText()
+        modulo = ctx.ID(0).getText()
         funcion = ctx.ID(1).getText()
-        nombre  = f"{modulo}.{funcion}"
+        nombre = f"{modulo}.{funcion}"
 
         args = []
         for expr in ctx.expresion():

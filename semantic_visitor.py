@@ -1,30 +1,143 @@
 from CalculadoraVisitor import CalculadoraVisitor
 from symbol_table import SymbolTable
 
+
+PRIMITIVE_TYPES = {"int", "float", "string", "bool", "void"}
+
+
 class SemanticVisitor(CalculadoraVisitor):
     def __init__(self):
         self.symbol_table = SymbolTable()
         self.errors = []
+        self.struct_types = {}
 
+    # ---------------- helpers ----------------
+    def _is_numeric(self, tipo):
+        return tipo in {"int", "float"}
+
+    def _is_struct_instance(self, tipo):
+        return isinstance(tipo, str) and tipo.startswith("struct:")
+
+    def _struct_name(self, tipo):
+        if not self._is_struct_instance(tipo):
+            return None
+        return tipo.split(":", 1)[1]
+
+    def _add_error(self, ctx, mensaje):
+        self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: {mensaje}")
+
+    def _is_assignable(self, destino, fuente):
+        if destino == "unknown" or fuente == "unknown":
+            return True
+        if destino == fuente:
+            return True
+        # Permitir promoción implícita int -> float
+        if destino == "float" and fuente == "int":
+            return True
+        return False
+
+    def _merge_types(self, t1, t2):
+        if t1 == "unknown" or t2 == "unknown":
+            return "unknown"
+        if t1 == t2:
+            return t1
+        if self._is_numeric(t1) and self._is_numeric(t2):
+            return "float" if "float" in (t1, t2) else "int"
+        return "unknown"
+
+    def _resolve_lvalue_type(self, lvalue_ctx):
+        ids = [tok.getText() for tok in lvalue_ctx.ID()]
+        if not ids:
+            return "unknown"
+
+        simbolo = self.symbol_table.lookup(ids[0])
+        if not simbolo:
+            self._add_error(lvalue_ctx, f"Variable '{ids[0]}' no declarada.")
+            return "unknown"
+
+        tipo_actual = simbolo["type"]
+
+        for campo in ids[1:]:
+            if not self._is_struct_instance(tipo_actual):
+                self._add_error(
+                    lvalue_ctx,
+                    f"'{ids[0]}' no es struct; acceso a campo '{campo}' inválido.",
+                )
+                return "unknown"
+
+            struct_name = self._struct_name(tipo_actual)
+            campos = self.struct_types.get(struct_name)
+            if campos is None:
+                self._add_error(lvalue_ctx, f"Tipo struct '{struct_name}' no definido.")
+                return "unknown"
+            if campo not in campos:
+                self._add_error(
+                    lvalue_ctx, f"El struct '{struct_name}' no tiene el campo '{campo}'."
+                )
+                return "unknown"
+
+            tipo_campo = campos[campo]
+            if tipo_campo in PRIMITIVE_TYPES:
+                tipo_actual = tipo_campo
+            else:
+                tipo_actual = f"struct:{tipo_campo}"
+
+        return tipo_actual
+
+    # ---------------- programa ----------------
     def visitArchivo(self, ctx):
+        # Primero registrar structs para permitir uso posterior
         for inst in ctx.instruccion():
+            if hasattr(inst, "structDecl") and inst.structDecl():
+                self.visit(inst)
+
+        # Luego el resto de instrucciones
+        for inst in ctx.instruccion():
+            if hasattr(inst, "structDecl") and inst.structDecl():
+                continue
             self.visit(inst)
         return None
 
-    # --- Manejo de Funciones (Nuevo) ---
+    # ---------------- structs ----------------
+    def visitInstruccionStruct(self, ctx):
+        self.visit(ctx.structDecl())
+        return None
+
+    def visitStructDecl(self, ctx):
+        nombre = ctx.ID().getText()
+        if nombre in PRIMITIVE_TYPES:
+            self._add_error(ctx, f"'{nombre}' no puede usarse como nombre de struct.")
+            return None
+        if nombre in self.struct_types:
+            self._add_error(ctx, f"El struct '{nombre}' ya fue declarado.")
+            return None
+
+        campos = {}
+        for field_ctx in ctx.structFieldDecl():
+            tipo = field_ctx.TIPO().getText()
+            campo = field_ctx.ID().getText()
+            if campo in campos:
+                self._add_error(
+                    field_ctx, f"Campo '{campo}' duplicado en struct '{nombre}'."
+                )
+                continue
+            campos[campo] = tipo
+
+        self.struct_types[nombre] = campos
+        return None
+
+    # ---------------- funciones ----------------
     def visitInstruccionFuncion(self, ctx):
         nombre = ctx.funcionDecl().ID().getText()
         tipo_retorno = ctx.funcionDecl().TIPO().getText()
-        
-        # 1. Registrar la función en el ámbito global para permitir recursividad
+
         try:
             self.symbol_table.declare(nombre, tipo_retorno)
         except Exception as e:
             self.errors.append(str(e))
 
-        # 2. Nuevo Scope para los parámetros y el cuerpo de la función
         self.symbol_table.push_scope()
-        
+
         params_ctx = ctx.funcionDecl().params()
         if params_ctx:
             for i in range(len(params_ctx.ID())):
@@ -34,11 +147,8 @@ class SemanticVisitor(CalculadoraVisitor):
                     self.symbol_table.declare(p_nombre, p_tipo)
                 except Exception as e:
                     self.errors.append(str(e))
-        
-        # 3. Visitar el bloque de la función
+
         self.visit(ctx.funcionDecl().block())
-        
-        # 4. Salir del Scope de la función
         self.symbol_table.pop_scope()
         return None
 
@@ -46,71 +156,135 @@ class SemanticVisitor(CalculadoraVisitor):
         nombre = ctx.ID().getText()
         func = self.symbol_table.lookup(nombre)
         if not func:
-            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: La función '{nombre}' no ha sido definida.")
+            self._add_error(ctx, f"La función '{nombre}' no ha sido definida.")
             return "unknown"
-        
-        # Validar argumentos (opcional: podrías validar que la cantidad coincida)
+
         if ctx.args():
             for arg in ctx.args().expresion():
                 self.visit(arg)
-                
-        return func['type']
 
-    # --- Declaraciones y Asignaciones ---
+        return func["type"]
+
+    # ---------------- declaraciones / asignaciones ----------------
     def visitInstruccionDeclaracion(self, ctx):
-        tipo = ctx.declaracion().TIPO().getText()
-        nombre = ctx.declaracion().ID().getText()
-        
-        if ctx.declaracion().expresion():
-            tipo_exp = self.visit(ctx.declaracion().expresion())
-            if tipo_exp != tipo and not (tipo == "float" and tipo_exp == "int"):
-                self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: No se puede asignar {tipo_exp} a {tipo}.")
-        
+        self.visit(ctx.declaracion())
+        return None
+
+    def visitDeclaracion(self, ctx):
+        # Alternativa 1: TIPO ID (= expr)?
+        if ctx.TIPO():
+            tipo = ctx.TIPO().getText()
+            nombre = ctx.ID(0).getText()
+
+            if ctx.expresion():
+                tipo_exp = self.visit(ctx.expresion())
+                if not self._is_assignable(tipo, tipo_exp):
+                    self._add_error(
+                        ctx, f"No se puede asignar {tipo_exp} a variable de tipo {tipo}."
+                    )
+
+            try:
+                self.symbol_table.declare(nombre, tipo)
+            except Exception as e:
+                self.errors.append(str(e))
+            return None
+
+        # Alternativa 2: ID ID  (declaración de variable struct)
+        tipo_struct = ctx.ID(0).getText()
+        nombre_var = ctx.ID(1).getText()
+
+        if tipo_struct not in self.struct_types:
+            self._add_error(ctx, f"El tipo struct '{tipo_struct}' no está declarado.")
+            return None
+
         try:
-            self.symbol_table.declare(nombre, tipo)
+            self.symbol_table.declare(nombre_var, f"struct:{tipo_struct}")
         except Exception as e:
             self.errors.append(str(e))
         return None
 
     def visitEjecutarAsignacion(self, ctx):
-        nombre = ctx.asignacion().ID().getText()
-        tipo_exp = self.visit(ctx.asignacion().expresion())
-        
-        var = self.symbol_table.lookup(nombre)
-        if not var:
-            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Variable '{nombre}' no declarada.")
-        elif var['type'] != tipo_exp and not (var['type'] == "float" and tipo_exp == "int"):
-            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Incompatibilidad de tipos en asignación a '{nombre}'.")
+        tipo_destino = self._resolve_lvalue_type(ctx.asignacion().lvalue())
+        tipo_fuente = self.visit(ctx.asignacion().expresion())
+        if not self._is_assignable(tipo_destino, tipo_fuente):
+            self._add_error(
+                ctx,
+                f"Incompatibilidad de tipos en asignación ({tipo_fuente} -> {tipo_destino}).",
+            )
         return None
 
-    # --- Estructuras de Control ---
+    # ---------------- control de flujo ----------------
     def visitInstruccionIf(self, ctx):
-        self.visit(ctx.ifStatement().expresion())
+        tipo_cond = self.visit(ctx.ifStatement().expresion())
+        if tipo_cond not in {"bool", "int", "float"}:
+            self._add_error(ctx, "La condición de if debe ser booleana o numérica.")
         self.visit(ctx.ifStatement().block(0))
         if ctx.ifStatement().block(1):
             self.visit(ctx.ifStatement().block(1))
         return None
 
+    def visitInstruccionSwitch(self, ctx):
+        self.visit(ctx.switchStatement())
+        return None
+
+    def visitSwitchStatement(self, ctx):
+        tipo_control = self.visit(ctx.expresion())
+        if tipo_control not in {"int", "float", "bool", "string"}:
+            self._add_error(ctx, "switch solo acepta tipos primitivos.")
+
+        for case_ctx in ctx.caseClause():
+            tipo_case = self.visit(case_ctx.expresion())
+            combinacion = self._merge_types(tipo_control, tipo_case)
+            if combinacion == "unknown" and not (
+                tipo_control == "string" and tipo_case == "string"
+            ):
+                self._add_error(
+                    case_ctx,
+                    f"Tipo de case ({tipo_case}) incompatible con switch ({tipo_control}).",
+                )
+            for inst in case_ctx.instruccion():
+                self.visit(inst)
+
+        if ctx.defaultClause():
+            for inst in ctx.defaultClause().instruccion():
+                self.visit(inst)
+        return None
+
     def visitInstruccionWhile(self, ctx):
-        self.visit(ctx.whileStatement().expresion())
+        tipo_cond = self.visit(ctx.whileStatement().expresion())
+        if tipo_cond not in {"bool", "int", "float"}:
+            self._add_error(ctx, "La condición de while debe ser booleana o numérica.")
         self.visit(ctx.whileStatement().block())
         return None
 
-    def visitBlock(self, ctx):
-        self.symbol_table.push_scope() # Manejo de Scopes para { } [cite: 42]
-        for inst in ctx.instruccion():
-            self.visit(inst)
-        self.symbol_table.pop_scope() # Pop al salir [cite: 43]
+    def visitInstruccionFor(self, ctx):
+        self.visit(ctx.forStatement())
         return None
 
-    # --- Expresiones y Tipos Primitivos ---
+    def visitForStatement(self, ctx):
+        self.symbol_table.push_scope()
+        self.visit(ctx.asignacion(0))
+        tipo_cond = self.visit(ctx.expresion())
+        if tipo_cond not in {"bool", "int", "float"}:
+            self._add_error(ctx, "La condición del for debe ser booleana o numérica.")
+        self.visit(ctx.block())
+        self.visit(ctx.asignacion(1))
+        self.symbol_table.pop_scope()
+        return None
+
+    def visitBlock(self, ctx):
+        self.symbol_table.push_scope()
+        for inst in ctx.instruccion():
+            self.visit(inst)
+        self.symbol_table.pop_scope()
+        return None
+
+    # ---------------- expresiones ----------------
     def visitVariable(self, ctx):
-        nombre = ctx.ID().getText()
-        var = self.symbol_table.lookup(nombre)
-        if not var:
-            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Variable '{nombre}' no declarada.")
-            return "unknown"
-        return var['type']
+        return self._resolve_lvalue_type(ctx.lvalue())
+
+    def visitLvalue(self, ctx):
+        return self._resolve_lvalue_type(ctx)
 
     def visitNumero(self, ctx):
         return "float" if "." in ctx.NUMERO().getText() else "int"
@@ -121,25 +295,53 @@ class SemanticVisitor(CalculadoraVisitor):
     def visitBooleano(self, ctx):
         return "bool"
 
+    def visitCastExplicito(self, ctx):
+        destino = ctx.TIPO().getText()
+        origen = self.visit(ctx.expresion())
+
+        if destino == "void":
+            self._add_error(ctx, "No se permite casting explícito a void.")
+            return "unknown"
+        if origen == "unknown":
+            return "unknown"
+        if origen.startswith("struct:"):
+            self._add_error(ctx, "No se permite casting de structs a tipos primitivos.")
+            return "unknown"
+        return destino
+
+    def visitTernario(self, ctx):
+        tipo_cond = self.visit(ctx.expresion(0))
+        if tipo_cond not in {"bool", "int", "float"}:
+            self._add_error(ctx, "La condición del ternario debe ser booleana o numérica.")
+
+        tipo_true = self.visit(ctx.expresion(1))
+        tipo_false = self.visit(ctx.expresion(2))
+        merged = self._merge_types(tipo_true, tipo_false)
+
+        if merged == "unknown":
+            self._add_error(
+                ctx,
+                f"Las ramas del ternario son incompatibles: {tipo_true} y {tipo_false}.",
+            )
+        return merged
+
     def visitSumaResta(self, ctx):
         t1 = self.visit(ctx.expresion(0))
         t2 = self.visit(ctx.expresion(1))
-        
-        # Permitir concatenación con '+'
-        if ctx.op.text == '+':
-            # Si alguno es string, el resultado es string (concatenación)
+
+        if ctx.op.text == "+":
             if t1 == "string" or t2 == "string":
                 return "string"
-            # Si no hay strings, es operación numérica
-            return "float" if t1 == "float" or t2 == "float" else "int"
-        
-        # Para resta '-', no permitir strings
-        else:  # ctx.op.text == '-'
-            if t1 == "string" or t2 == "string":
-                self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: No se puede restar con strings.")
-                return "unknown"
-            return "float" if t1 == "float" or t2 == "float" else "int"
+            if self._is_numeric(t1) and self._is_numeric(t2):
+                return "float" if "float" in (t1, t2) else "int"
+            self._add_error(ctx, "No se puede sumar esos tipos.")
+            return "unknown"
 
+        # resta
+        if self._is_numeric(t1) and self._is_numeric(t2):
+            return "float" if "float" in (t1, t2) else "int"
+        self._add_error(ctx, "La resta solo aplica a tipos numéricos.")
+        return "unknown"
 
     def visitRelacional(self, ctx):
         self.visit(ctx.expresion(0))
@@ -149,13 +351,10 @@ class SemanticVisitor(CalculadoraVisitor):
     def visitMultiplicacionDivisisionMod(self, ctx):
         t1 = self.visit(ctx.expresion(0))
         t2 = self.visit(ctx.expresion(1))
-        
-        # Validar que ambas sean numéricas
-        if t1 not in ["int", "float"] or t2 not in ["int", "float"]:
-            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: No se puede realizar operación aritmética con tipos no numéricos.")
+        if not self._is_numeric(t1) or not self._is_numeric(t2):
+            self._add_error(ctx, "Operación aritmética inválida para tipos no numéricos.")
             return "unknown"
-        
-        return "float" if t1 == "float" or t2 == "float" else "int"
+        return "float" if "float" in (t1, t2) else "int"
 
     def visitAndOrLogico(self, ctx):
         self.visit(ctx.expresion(0))
@@ -166,31 +365,9 @@ class SemanticVisitor(CalculadoraVisitor):
         self.visit(ctx.expresion())
         return "bool"
 
+    # ---------------- otras instrucciones ----------------
     def visitInstruccionBloque(self, ctx):
         self.visit(ctx.block())
-        return None
-
-    def visitInstruccionFor(self, ctx):
-        self.visit(ctx.forStatement())
-        return None
-
-    def visitForStatement(self, ctx):
-        # Crear scope para el for
-        self.symbol_table.push_scope()
-        
-        # Primera asignación (inicialización)
-        self.visit(ctx.asignacion(0))
-        
-        # Condición
-        self.visit(ctx.expresion())
-        
-        # Bloque
-        self.visit(ctx.block())
-        
-        # Segunda asignación (incremento)
-        self.visit(ctx.asignacion(1))
-        
-        self.symbol_table.pop_scope()
         return None
 
     def visitBreakStmt(self, ctx):
@@ -209,24 +386,21 @@ class SemanticVisitor(CalculadoraVisitor):
 
     def visitInstruccionReturn(self, ctx):
         expr = ctx.returnStmt().expresion()
-        
         if expr:
-            return self.visit(expr)   # return con valor
-        else:
-            return None              # return vacío
+            return self.visit(expr)
+        return None
 
     def visitLlamadaModulo(self, ctx):
         modulo = ctx.ID(0).getText()
         funcion = ctx.ID(1).getText()
-        
-        # Validar que el módulo sea conocido
+
         if modulo == "math":
-            # Funciones del módulo math devuelven float
             if funcion in ["sqrt", "pow", "sin", "cos"]:
                 return "float"
-            else:
-                self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Función '{funcion}' no existe en módulo '{modulo}'.")
-                return "unknown"
-        else:
-            self.errors.append(f"[Error Semántico] Línea {ctx.start.line}: Módulo '{modulo}' no reconocido.")
+            self._add_error(
+                ctx, f"Función '{funcion}' no existe en módulo '{modulo}'."
+            )
             return "unknown"
+
+        self._add_error(ctx, f"Módulo '{modulo}' no reconocido.")
+        return "unknown"

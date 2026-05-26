@@ -8,11 +8,13 @@ importStatement : IMPORT ID;
 instruccion : declaracion           # InstruccionDeclaracion
             | asignacion            # EjecutarAsignacion
             | PRINTI PARENTESISI expresion PARENTESISD # EjecutarPrint
+            | switchStatement       # InstruccionSwitch
             | ifStatement           # InstruccionIf
             | whileStatement        # InstruccionWhile
             | forStatement          # InstruccionFor
             | returnStmt            # InstruccionReturn
             | funcionDecl           # InstruccionFuncion
+            | structDecl            # InstruccionStruct
             | expresion             # InstruccionExpresion
             | BREAK           # BreakStmt
             | CONTINUE        # ContinueStmt
@@ -20,12 +22,18 @@ instruccion : declaracion           # InstruccionDeclaracion
             ;
 
 // Tipos explícitos y funciones
-declaracion : TIPO ID (ASSIGN expresion)? ;
-asignacion  : ID ASSIGN expresion ;
+declaracion : TIPO ID (ASSIGN expresion)?
+            | ID ID
+            ;
+asignacion  : lvalue ASSIGN expresion ;
 returnStmt  : RETURN (expresion)? ;
 
 funcionDecl : TIPO ID PARENTESISI (params)? PARENTESISD block ;
 params      : TIPO ID (',' TIPO ID)* ;
+
+// Structs
+structDecl      : STRUCT ID BLOCKI structFieldDecl* BLOCKF ;
+structFieldDecl : TIPO ID ;
 
 // Estructuras de control
 whileStatement : WHILE PARENTESISI expresion PARENTESISD block ;
@@ -33,21 +41,28 @@ forStatement   : FOR PARENTESISI asignacion ';' expresion ';' asignacion PARENTE
 block          : BLOCKI instruccion* BLOCKF ;
 
 ifStatement : IFINICIO PARENTESISI expresion PARENTESISD block (ELSE block)? ;
+switchStatement : SWITCH PARENTESISI expresion PARENTESISD BLOCKI caseClause+ defaultClause? BLOCKF ;
+caseClause      : CASE expresion COLON instruccion* ;
+defaultClause   : DEFAULT COLON instruccion* ;
+
+lvalue : ID (PUNTO ID)* ;
 
 // Jerarquía de expresiones
-expresion : PARENTESISI expresion PARENTESISD # Parentesis
+expresion : PARENTESISI TIPO PARENTESISD expresion # CastExplicito
+          | PARENTESISI expresion PARENTESISD # Parentesis
           | CORCHI expresion CORCHD           # Corchetes
           | NUMERO                            # Numero
           | STRING                            # Cadena
           | BOOLEANO                          # Booleano
           | ID PARENTESISI (args)? PARENTESISD # LlamadaFuncion
           | ID PUNTO ID PARENTESISI (expresion (COMA expresion)*)? PARENTESISD # LlamadaModulo
-          | ID                                # Variable
+          | lvalue                            # Variable
           | NOTLOGICO expresion               # NotLogico
           | expresion op=(MULT|DIV|MOD) expresion # MultiplicacionDivisisionMod
           | expresion op=(SUM|REST) expresion # SumaResta
           | expresion op=(IGUALA|DIFERENTEA|DIFERENTEA2|MENORQUE|MAYORQUE|MENORIGUAL|MAYORIGUAL) expresion # Relacional
           | expresion op=(AND|OR) expresion   # AndOrLogico
+          | expresion QUESTION expresion COLON expresion # Ternario
           ;
 
 args : expresion (',' expresion)* ;
@@ -62,6 +77,10 @@ BLOCKI  : '{';
 BLOCKF  : '}';
 IFINICIO: 'simon';
 ELSE    : 'sinel';
+SWITCH  : 'switch';
+CASE    : 'case';
+DEFAULT : 'default';
+STRUCT  : 'struct';
 WHILE   : 'while';
 BREAK    : 'break';
 CONTINUE : 'continue';
@@ -89,6 +108,8 @@ AND : '&&';
 OR  : '||' ;
 COMA : ',';
 PUNTO: '.';
+COLON: ':';
+QUESTION: '?';
 
 NUMERO  : '-'? [0-9]+ ('.' [0-9]+)? ;
 STRING  : '"' .*? '"' ;
