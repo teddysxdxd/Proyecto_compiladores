@@ -120,22 +120,6 @@ def run_pipeline(archivo_entrada):
             print("-" * 30)
             print("Programa finalizado con éxito.")
 
-        # 7. Compiler externo
-        with medir_fase("Fase Compiler.py", metricas):
-            print(f"Procesando archivo: {archivo_entrada}\n")
-
-            result = subprocess.run(
-                [sys.executable, "compiler.py", archivo_entrada],
-                capture_output=True,
-                text=True
-            )
-
-            if result.stdout:
-                print(result.stdout)
-
-            if result.stderr:
-                print(result.stderr)
-
         imprimir_resumen(metricas)
 
     except Exception as e:

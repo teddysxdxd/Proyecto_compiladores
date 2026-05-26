@@ -26,6 +26,12 @@ class InterpreterVisitor(CalculadoraVisitor):
         self.symbol_table.assign(nombre, valor)
         return valor
 
+    def visitInstruccionExpresion(self, ctx):
+        resultado = self.visit(ctx.expresion())
+        if resultado is not None:
+            print(f"Resultado: {resultado}")
+        return resultado
+
     # --- Estructuras de Control ---
     def visitWhileStatement(self, ctx):
         # El while debe re-evaluar la condición en cada vuelta
