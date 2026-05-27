@@ -23,6 +23,7 @@ instruccion : declaracion           # InstruccionDeclaracion
 
 // Tipos explícitos y funciones
 declaracion : TIPO ID (ASSIGN expresion)?
+            | TIPO CORCHI CORCHD ID ASSIGN CORCHI expresion (COMA expresion)* CORCHD
             | ID ID
             ;
 asignacion  : lvalue ASSIGN expresion ;
@@ -45,7 +46,7 @@ switchStatement : SWITCH PARENTESISI expresion PARENTESISD BLOCKI caseClause+ de
 caseClause      : CASE expresion COLON instruccion* ;
 defaultClause   : DEFAULT COLON instruccion* ;
 
-lvalue : ID (PUNTO ID)* ;
+lvalue : ID ((PUNTO ID) | (CORCHI expresion CORCHD))* ;
 
 // Jerarquía de expresiones
 expresion : PARENTESISI TIPO PARENTESISD expresion # CastExplicito

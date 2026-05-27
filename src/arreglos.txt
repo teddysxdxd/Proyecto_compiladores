@@ -1,0 +1,12 @@
+Program
+    int[] nums = [5, 8, 13, 21, 34]
+    int i = 0
+
+    while (i < 5) {
+        print(nums[i])
+        i = i + 1
+    }
+
+    nums[2] = 99
+    print(nums[2])
+End_Program

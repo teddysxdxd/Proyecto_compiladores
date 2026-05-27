@@ -29,7 +29,7 @@ def medir_fase(nombre, metricas):
         fin = time.perf_counter()
         duracion = fin - inicio
         metricas[nombre] = duracion
-        print(f"[FIN] {nombre} - Duración: {duracion:.6f} segundos")
+        print(f"[FIN] {nombre} - Duración: {duracion * 1000:.3f} ms")
 
 
 def imprimir_resumen(metricas):
@@ -40,11 +40,30 @@ def imprimir_resumen(metricas):
     total = sum(metricas.values())
 
     for fase, duracion in metricas.items():
-        print(f"{fase}: {duracion:.6f} segundos")
+        print(f"{fase}: {duracion * 1000:.3f} ms")
 
     print("-" * 40)
-    print(f"TOTAL: {total:.6f} segundos")
+    print(f"TOTAL: {total * 1000:.3f} ms")
     print("=" * 40)
+
+
+def ejecutar_binario_linux(ruta_binario):
+    if not ruta_binario:
+        return {"ok": False, "error": "Ruta de binario vacía."}
+    if not os.path.exists(ruta_binario):
+        return {"ok": False, "error": f"No existe el binario: {ruta_binario}"}
+
+    inicio = time.perf_counter()
+    proc = subprocess.run([ruta_binario], capture_output=True, text=True)
+    fin = time.perf_counter()
+
+    return {
+        "ok": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+        "tiempo_ejecucion_ms": (fin - inicio) * 1000.0,
+    }
 
 
 def run_pipeline(archivo_entrada, targets_fase8=("linux", "windows")):
@@ -165,6 +184,35 @@ def run_pipeline(archivo_entrada, targets_fase8=("linux", "windows")):
                         f"[BIN-{target.upper()}] OK -> {info.get('binary_path')} "
                         f"(obj: {info.get('object_path')})"
                     )
+                    if info.get("tiempo_objeto_ms") is not None:
+                        print(
+                            f"    tiempos({target}): "
+                            f"objeto={info.get('tiempo_objeto_ms', 0.0):.3f} ms, "
+                            f"enlazado={info.get('tiempo_enlazado_ms', 0.0):.3f} ms, "
+                            f"total={info.get('tiempo_total_generacion_ms', 0.0):.3f} ms"
+                        )
+
+                    if target.lower() == "linux":
+                        run_info = ejecutar_binario_linux(info.get("binary_path"))
+                        if run_info.get("ok"):
+                            print(
+                                f"[RUN-LINUX] OK -> tiempo ejecución: "
+                                f"{run_info.get('tiempo_ejecucion_ms', 0.0):.3f} ms"
+                            )
+                            salida = run_info.get("stdout", "").strip()
+                            if salida:
+                                print("[RUN-LINUX] salida:")
+                                for linea in salida.splitlines():
+                                    print(f"    {linea}")
+                        else:
+                            print(f"[RUN-LINUX] ERROR -> {run_info.get('error', 'fallo de ejecución')}")
+                            if run_info.get("stderr"):
+                                print(f"    stderr: {run_info.get('stderr')}")
+                    elif target.lower() == "windows":
+                        print(
+                            "[RUN-WINDOWS] Omitido en este entorno Linux/WSL; "
+                            "validar ejecución en Windows real."
+                        )
                 else:
                     print(f"[BIN-{target.upper()}] ERROR -> {info.get('error')}")
                     if info.get("link_cmd"):

@@ -18,6 +18,14 @@ class SemanticVisitor(CalculadoraVisitor):
     def _is_struct_instance(self, tipo):
         return isinstance(tipo, str) and tipo.startswith("struct:")
 
+    def _is_array_type(self, tipo):
+        return isinstance(tipo, str) and tipo.startswith("array:")
+
+    def _array_elem_type(self, tipo):
+        if not self._is_array_type(tipo):
+            return None
+        return tipo.split(":", 1)[1]
+
     def _struct_name(self, tipo):
         if not self._is_struct_instance(tipo):
             return None
@@ -45,42 +53,72 @@ class SemanticVisitor(CalculadoraVisitor):
             return "float" if "float" in (t1, t2) else "int"
         return "unknown"
 
+    def _iter_lvalue_ops(self, lvalue_ctx):
+        children = list(lvalue_ctx.getChildren())
+        expr_ctxs = lvalue_ctx.expresion()
+        expr_i = 0
+        i = 1
+        while i < len(children):
+            text = children[i].getText()
+            if text == "." and i + 1 < len(children):
+                yield ("field", children[i + 1].getText(), None)
+                i += 2
+            elif text == "[":
+                expr_ctx = expr_ctxs[expr_i] if expr_i < len(expr_ctxs) else None
+                yield ("index", None, expr_ctx)
+                expr_i += 1
+                i += 3
+            else:
+                i += 1
+
     def _resolve_lvalue_type(self, lvalue_ctx):
-        ids = [tok.getText() for tok in lvalue_ctx.ID()]
-        if not ids:
+        base_id = lvalue_ctx.ID(0).getText() if lvalue_ctx.ID() else None
+        if not base_id:
             return "unknown"
 
-        simbolo = self.symbol_table.lookup(ids[0])
+        simbolo = self.symbol_table.lookup(base_id)
         if not simbolo:
-            self._add_error(lvalue_ctx, f"Variable '{ids[0]}' no declarada.")
+            self._add_error(lvalue_ctx, f"Variable '{base_id}' no declarada.")
             return "unknown"
 
         tipo_actual = simbolo["type"]
 
-        for campo in ids[1:]:
-            if not self._is_struct_instance(tipo_actual):
-                self._add_error(
-                    lvalue_ctx,
-                    f"'{ids[0]}' no es struct; acceso a campo '{campo}' inválido.",
-                )
-                return "unknown"
+        for op_kind, campo, expr_ctx in self._iter_lvalue_ops(lvalue_ctx):
+            if op_kind == "field":
+                if not self._is_struct_instance(tipo_actual):
+                    self._add_error(
+                        lvalue_ctx,
+                        f"'{base_id}' no es struct; acceso a campo '{campo}' inválido.",
+                    )
+                    return "unknown"
 
-            struct_name = self._struct_name(tipo_actual)
-            campos = self.struct_types.get(struct_name)
-            if campos is None:
-                self._add_error(lvalue_ctx, f"Tipo struct '{struct_name}' no definido.")
-                return "unknown"
-            if campo not in campos:
-                self._add_error(
-                    lvalue_ctx, f"El struct '{struct_name}' no tiene el campo '{campo}'."
-                )
-                return "unknown"
+                struct_name = self._struct_name(tipo_actual)
+                campos = self.struct_types.get(struct_name)
+                if campos is None:
+                    self._add_error(lvalue_ctx, f"Tipo struct '{struct_name}' no definido.")
+                    return "unknown"
+                if campo not in campos:
+                    self._add_error(
+                        lvalue_ctx, f"El struct '{struct_name}' no tiene el campo '{campo}'."
+                    )
+                    return "unknown"
 
-            tipo_campo = campos[campo]
-            if tipo_campo in PRIMITIVE_TYPES:
-                tipo_actual = tipo_campo
+                tipo_campo = campos[campo]
+                if tipo_campo in PRIMITIVE_TYPES:
+                    tipo_actual = tipo_campo
+                else:
+                    tipo_actual = f"struct:{tipo_campo}"
+            elif op_kind == "index":
+                if not self._is_array_type(tipo_actual):
+                    self._add_error(lvalue_ctx, "Indexación solo válida sobre arreglos.")
+                    return "unknown"
+                tipo_indice = self.visit(expr_ctx) if expr_ctx else "unknown"
+                if tipo_indice not in {"int", "float", "bool", "unknown"}:
+                    self._add_error(lvalue_ctx, "El índice del arreglo debe ser numérico.")
+                tipo_actual = self._array_elem_type(tipo_actual) or "unknown"
             else:
-                tipo_actual = f"struct:{tipo_campo}"
+                self._add_error(lvalue_ctx, "Operación de lvalue no soportada.")
+                return "unknown"
 
         return tipo_actual
 
@@ -171,13 +209,38 @@ class SemanticVisitor(CalculadoraVisitor):
         return None
 
     def visitDeclaracion(self, ctx):
+        # Alternativa 2: TIPO [] ID = [expr, ...] (arreglo)
+        if ctx.TIPO() and len(ctx.CORCHI()) >= 2:
+            tipo_elem = ctx.TIPO().getText()
+            nombre = ctx.ID(0).getText()
+            exprs = ctx.expresion()
+            if not exprs:
+                self._add_error(ctx, "Un arreglo debe inicializarse con al menos un valor.")
+                return None
+
+            for expr_ctx in exprs:
+                tipo_exp = self.visit(expr_ctx)
+                if not self._is_assignable(tipo_elem, tipo_exp):
+                    self._add_error(
+                        ctx,
+                        f"No se puede asignar {tipo_exp} a elemento de arreglo {tipo_elem}.",
+                    )
+
+            try:
+                self.symbol_table.declare(nombre, f"array:{tipo_elem}")
+            except Exception as e:
+                self.errors.append(str(e))
+            return None
+
         # Alternativa 1: TIPO ID (= expr)?
         if ctx.TIPO():
             tipo = ctx.TIPO().getText()
             nombre = ctx.ID(0).getText()
+            exprs = ctx.expresion()
+            expr_ctx = exprs[0] if exprs else None
 
-            if ctx.expresion():
-                tipo_exp = self.visit(ctx.expresion())
+            if expr_ctx:
+                tipo_exp = self.visit(expr_ctx)
                 if not self._is_assignable(tipo, tipo_exp):
                     self._add_error(
                         ctx, f"No se puede asignar {tipo_exp} a variable de tipo {tipo}."

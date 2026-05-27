@@ -81,6 +81,8 @@ class IRGenerator(CalculadoraVisitor):
         self.struct_types = {}       # nombre -> IdentifiedStructType
         self.struct_fields = {}      # nombre -> [(field_name, field_tipo_str)]
         self.struct_index = {}       # nombre -> {field_name: idx}
+        self.break_targets = []      # stack de bloques destino para break
+        self.continue_targets = []   # stack de bloques destino para continue
         self._str_n  = 0
         self._fmt_cache = {}         # texto -> ir.GlobalVariable
 
@@ -115,6 +117,22 @@ class IRGenerator(CalculadoraVisitor):
     def _is_struct_instance_type(self, tipo_str: str) -> bool:
         return isinstance(tipo_str, str) and tipo_str.startswith("struct:")
 
+    def _is_array_instance_type(self, tipo_str: str) -> bool:
+        return isinstance(tipo_str, str) and tipo_str.startswith("array:")
+
+    def _array_meta_from_type(self, tipo_str: str):
+        if not self._is_array_instance_type(tipo_str):
+            return None, None
+        parts = tipo_str.split(":")
+        elem_tipo = parts[1] if len(parts) > 1 else None
+        arr_len = None
+        if len(parts) > 2:
+            try:
+                arr_len = int(parts[2])
+            except Exception:
+                arr_len = None
+        return elem_tipo, arr_len
+
     def _struct_name_from_instance_type(self, tipo_str: str):
         if not self._is_struct_instance_type(tipo_str):
             return None
@@ -124,6 +142,9 @@ class IRGenerator(CalculadoraVisitor):
         if self._is_struct_instance_type(tipo_str):
             sname = self._struct_name_from_instance_type(tipo_str)
             return self.struct_types.get(sname, INT)
+        if self._is_array_instance_type(tipo_str):
+            elem_tipo, _ = self._array_meta_from_type(tipo_str)
+            return self._llvm_type_for_name(elem_tipo or "int")
         if tipo_str in self.struct_types:
             return self.struct_types[tipo_str]
         return llvm_type(tipo_str)
@@ -190,41 +211,77 @@ class IRGenerator(CalculadoraVisitor):
 
         return alloca
 
+    def _iter_lvalue_ops(self, lvalue_ctx):
+        children = list(lvalue_ctx.getChildren())
+        expr_ctxs = lvalue_ctx.expresion()
+        expr_i = 0
+        i = 1
+        while i < len(children):
+            text = children[i].getText()
+            if text == "." and i + 1 < len(children):
+                yield ("field", children[i + 1].getText(), None)
+                i += 2
+            elif text == "[":
+                expr_ctx = expr_ctxs[expr_i] if expr_i < len(expr_ctxs) else None
+                yield ("index", None, expr_ctx)
+                expr_i += 1
+                i += 3
+            else:
+                i += 1
+
     def _resolve_lvalue_ptr_and_type(self, lvalue_ctx):
-        ids = [tok.getText() for tok in lvalue_ctx.ID()]
-        if not ids:
+        if not lvalue_ctx.ID():
             return None, None
 
-        ptr, tipo_str = self.scope.lookup(ids[0])
+        base_name = lvalue_ctx.ID(0).getText()
+        ptr, tipo_str = self.scope.lookup(base_name)
         if ptr is None:
             return None, None
 
         current_ptr = ptr
         current_tipo = tipo_str
 
-        for field in ids[1:]:
-            if not self._is_struct_instance_type(current_tipo):
-                return None, None
+        for op_kind, field, expr_ctx in self._iter_lvalue_ops(lvalue_ctx):
+            if op_kind == "field":
+                if not self._is_struct_instance_type(current_tipo):
+                    return None, None
 
-            sname = self._struct_name_from_instance_type(current_tipo)
-            fmap = self.struct_index.get(sname, {})
-            fmeta = self.struct_fields.get(sname, [])
-            if field not in fmap:
-                return None, None
+                sname = self._struct_name_from_instance_type(current_tipo)
+                fmap = self.struct_index.get(sname, {})
+                fmeta = self.struct_fields.get(sname, [])
+                if field not in fmap:
+                    return None, None
 
-            idx = fmap[field]
-            field_name, field_tipo = fmeta[idx]
-            _ = field_name
+                idx = fmap[field]
+                field_name, field_tipo = fmeta[idx]
+                _ = field_name
 
-            current_ptr = self.builder.gep(
-                current_ptr,
-                [ir.Constant(INT, 0), ir.Constant(INT, idx)],
-                inbounds=True,
-            )
-            if field_tipo in self.struct_types:
-                current_tipo = f"struct:{field_tipo}"
+                current_ptr = self.builder.gep(
+                    current_ptr,
+                    [ir.Constant(INT, 0), ir.Constant(INT, idx)],
+                    inbounds=True,
+                )
+                if field_tipo in self.struct_types:
+                    current_tipo = f"struct:{field_tipo}"
+                else:
+                    current_tipo = field_tipo
+
+            elif op_kind == "index":
+                if not self._is_array_instance_type(current_tipo):
+                    return None, None
+                elem_tipo, _ = self._array_meta_from_type(current_tipo)
+                index_val = self.visit(expr_ctx) if expr_ctx else ir.Constant(INT, 0)
+                if index_val is None:
+                    index_val = ir.Constant(INT, 0)
+                index_val = self._coerce(index_val, INT)
+                current_ptr = self.builder.gep(
+                    current_ptr,
+                    [ir.Constant(INT, 0), index_val],
+                    inbounds=True,
+                )
+                current_tipo = elem_tipo or "int"
             else:
-                current_tipo = field_tipo
+                return None, None
 
         return current_ptr, current_tipo
 
@@ -334,6 +391,33 @@ class IRGenerator(CalculadoraVisitor):
     # ── declaración ───────────────────────────────────────────────
 
     def visitDeclaracion(self, ctx: CalculadoraParser.DeclaracionContext):
+        # TIPO [] ID = [expr, ...]
+        if ctx.TIPO() and len(ctx.CORCHI()) >= 2:
+            tipo_elem = ctx.TIPO().getText()
+            name = ctx.ID(0).getText()
+            exprs = ctx.expresion()
+            if not exprs:
+                return
+
+            elem_ty = self._llvm_type_for_name(tipo_elem)
+            arr_len = len(exprs)
+            arr_ty = ir.ArrayType(elem_ty, arr_len)
+            alloca = self._alloca(name, arr_ty)
+            self.scope.define(name, alloca, f"array:{tipo_elem}:{arr_len}")
+
+            for idx, expr_ctx in enumerate(exprs):
+                elem_ptr = self.builder.gep(
+                    alloca,
+                    [ir.Constant(INT, 0), ir.Constant(INT, idx)],
+                    inbounds=True,
+                )
+                val = self.visit(expr_ctx)
+                if val is None:
+                    val = self._default_val_for_type(tipo_elem)
+                val = self._coerce(val, elem_ty)
+                self.builder.store(val, elem_ptr)
+            return
+
         # TIPO ID (= expr)?
         if ctx.TIPO():
             tipo_str = ctx.TIPO().getText()
@@ -343,8 +427,10 @@ class IRGenerator(CalculadoraVisitor):
             alloca = self._alloca(name, ltype)
             self.scope.define(name, alloca, tipo_str)
 
-            if ctx.expresion():
-                val = self._coerce(self.visit(ctx.expresion()), ltype)
+            exprs = ctx.expresion()
+            expr_ctx = exprs[0] if exprs else None
+            if expr_ctx:
+                val = self._coerce(self.visit(expr_ctx), ltype)
             else:
                 val = self._default_val_for_type(tipo_str)
 
@@ -366,15 +452,15 @@ class IRGenerator(CalculadoraVisitor):
 
     def visitAsignacion(self, ctx: CalculadoraParser.AsignacionContext):
         lvalue_ctx = ctx.lvalue()
-        ids = [tok.getText() for tok in lvalue_ctx.ID()]
+        ops = list(self._iter_lvalue_ops(lvalue_ctx))
         rval = self.visit(ctx.expresion())
 
-        if not ids:
+        if not lvalue_ctx.ID():
             return
 
         # Asignación simple con autodeclaración para compatibilidad histórica
-        if len(ids) == 1:
-            name = ids[0]
+        if not ops:
+            name = lvalue_ctx.ID(0).getText()
             alloca, tipo_str = self.scope.lookup(name)
             if alloca is None:
                 tipo_str = tipo_str_from_llvm(rval.type)
@@ -386,7 +472,7 @@ class IRGenerator(CalculadoraVisitor):
             self.builder.store(rval, alloca)
             return
 
-        # Asignación a campo struct (obj.campo = expr)
+        # Asignación compuesta (obj.campo = expr, arr[i] = expr)
         ptr, tipo_str = self._resolve_lvalue_ptr_and_type(lvalue_ctx)
         if ptr is None or tipo_str is None:
             return
@@ -473,7 +559,10 @@ class IRGenerator(CalculadoraVisitor):
 
     def visitBlock(self, ctx: CalculadoraParser.BlockContext):
         self.scope = Scope(parent=self.scope)
-        self.visitChildren(ctx)
+        for inst in ctx.instruccion():
+            if self.builder.block.is_terminated:
+                break
+            self.visit(inst)
         self.scope = self.scope.parent
 
     # ── if / if-else ──────────────────────────────────────────────
@@ -530,21 +619,29 @@ class IRGenerator(CalculadoraVisitor):
             if next_test_bb is not None:
                 current_test_bb = next_test_bb
 
-        # Bloques case
-        for idx, case_ctx in enumerate(ctx.caseClause()):
-            self.builder.position_at_end(case_blocks[idx])
-            for inst in case_ctx.instruccion():
-                self.visit(inst)
+        self.break_targets.append(end_bb)
+        try:
+            # Bloques case
+            for idx, case_ctx in enumerate(ctx.caseClause()):
+                self.builder.position_at_end(case_blocks[idx])
+                for inst in case_ctx.instruccion():
+                    if self.builder.block.is_terminated:
+                        break
+                    self.visit(inst)
+                if not self.builder.block.is_terminated:
+                    self.builder.branch(end_bb)
+
+            # default
+            self.builder.position_at_end(default_bb)
+            if ctx.defaultClause():
+                for inst in ctx.defaultClause().instruccion():
+                    if self.builder.block.is_terminated:
+                        break
+                    self.visit(inst)
             if not self.builder.block.is_terminated:
                 self.builder.branch(end_bb)
-
-        # default
-        self.builder.position_at_end(default_bb)
-        if ctx.defaultClause():
-            for inst in ctx.defaultClause().instruccion():
-                self.visit(inst)
-        if not self.builder.block.is_terminated:
-            self.builder.branch(end_bb)
+        finally:
+            self.break_targets.pop()
 
         self.builder.position_at_end(end_bb)
 
@@ -563,7 +660,13 @@ class IRGenerator(CalculadoraVisitor):
         self.builder.cbranch(cond, body_bb, end_bb)
 
         self.builder.position_at_end(body_bb)
-        self.visit(ctx.block())
+        self.break_targets.append(end_bb)
+        self.continue_targets.append(cond_bb)
+        try:
+            self.visit(ctx.block())
+        finally:
+            self.continue_targets.pop()
+            self.break_targets.pop()
         if not self.builder.block.is_terminated:
             self.builder.branch(cond_bb)
 
@@ -588,7 +691,13 @@ class IRGenerator(CalculadoraVisitor):
         self.builder.cbranch(cond, body_bb, end_bb)
 
         self.builder.position_at_end(body_bb)
-        self.visit(ctx.block())
+        self.break_targets.append(end_bb)
+        self.continue_targets.append(incr_bb)
+        try:
+            self.visit(ctx.block())
+        finally:
+            self.continue_targets.pop()
+            self.break_targets.pop()
         if not self.builder.block.is_terminated:
             self.builder.branch(incr_bb)
 
@@ -597,6 +706,18 @@ class IRGenerator(CalculadoraVisitor):
         self.builder.branch(cond_bb)
 
         self.builder.position_at_end(end_bb)
+
+    def visitBreakStmt(self, ctx):
+        if not self.break_targets:
+            return
+        if not self.builder.block.is_terminated:
+            self.builder.branch(self.break_targets[-1])
+
+    def visitContinueStmt(self, ctx):
+        if not self.continue_targets:
+            return
+        if not self.builder.block.is_terminated:
+            self.builder.branch(self.continue_targets[-1])
 
     # ── expresiones ───────────────────────────────────────────────
 

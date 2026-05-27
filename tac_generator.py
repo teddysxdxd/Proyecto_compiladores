@@ -24,8 +24,36 @@ class TACGenerator(CalculadoraVisitor):
     def _emit(self, line: str):
         self.instructions.append(line)
 
+    def _iter_lvalue_ops(self, lvalue_ctx):
+        children = list(lvalue_ctx.getChildren())
+        expr_ctxs = lvalue_ctx.expresion()
+        expr_i = 0
+        i = 1
+        while i < len(children):
+            text = children[i].getText()
+            if text == "." and i + 1 < len(children):
+                yield ("field", children[i + 1].getText(), None)
+                i += 2
+            elif text == "[":
+                expr_ctx = expr_ctxs[expr_i] if expr_i < len(expr_ctxs) else None
+                yield ("index", None, expr_ctx)
+                expr_i += 1
+                i += 3
+            else:
+                i += 1
+
     def _lvalue_text(self, lvalue_ctx) -> str:
-        return ".".join(tok.getText() for tok in lvalue_ctx.ID())
+        ids = lvalue_ctx.ID()
+        if not ids:
+            return ""
+        text = ids[0].getText()
+        for op_kind, field, expr_ctx in self._iter_lvalue_ops(lvalue_ctx):
+            if op_kind == "field":
+                text += f".{field}"
+            elif op_kind == "index":
+                idx = self.visit(expr_ctx) if expr_ctx else "0"
+                text += f"[{idx}]"
+        return text
 
     def get_tac(self) -> str:
         return "\n".join(self.instructions)
@@ -96,11 +124,23 @@ class TACGenerator(CalculadoraVisitor):
 
     # ---------------- declaraciones ----------------
     def visitDeclaracion(self, ctx: CalculadoraParser.DeclaracionContext):
+        # TIPO [] ID = [expr, ...]
+        if ctx.TIPO() and len(ctx.CORCHI()) >= 2:
+            tipo = ctx.TIPO().getText()
+            name = ctx.ID(0).getText()
+            vals = [self.visit(expr_ctx) for expr_ctx in ctx.expresion()]
+            self._emit(f"{name} = array<{tipo}>[{len(vals)}]")
+            for idx, val in enumerate(vals):
+                self._emit(f"{name}[{idx}] = {val}")
+            return None
+
         # TIPO ID (= expr)?
         if ctx.TIPO():
             name = ctx.ID(0).getText()
-            if ctx.expresion():
-                val = self.visit(ctx.expresion())
+            exprs = ctx.expresion()
+            expr_ctx = exprs[0] if exprs else None
+            if expr_ctx:
+                val = self.visit(expr_ctx)
                 self._emit(f"{name} = {val}")
             else:
                 defaults = {

@@ -38,6 +38,15 @@ class InterpreterVisitor(CalculadoraVisitor):
     def _is_struct_instance_type(self, tipo):
         return isinstance(tipo, str) and tipo.startswith("struct:")
 
+    def _is_array_type(self, tipo):
+        return isinstance(tipo, str) and tipo.startswith("array:")
+
+    def _array_elem_type(self, tipo):
+        if not self._is_array_type(tipo):
+            return None
+        parts = tipo.split(":")
+        return parts[1] if len(parts) > 1 else None
+
     def _struct_name(self, tipo):
         if not self._is_struct_instance_type(tipo):
             return None
@@ -77,8 +86,34 @@ class InterpreterVisitor(CalculadoraVisitor):
             return str(value)
         return value
 
-    def _lvalue_parts(self, lvalue_ctx):
-        return [tok.getText() for tok in lvalue_ctx.ID()]
+    def _iter_lvalue_ops(self, lvalue_ctx):
+        children = list(lvalue_ctx.getChildren())
+        expr_ctxs = lvalue_ctx.expresion()
+        expr_i = 0
+        i = 1
+        while i < len(children):
+            text = children[i].getText()
+            if text == "." and i + 1 < len(children):
+                yield ("field", children[i + 1].getText(), None)
+                i += 2
+            elif text == "[":
+                expr_ctx = expr_ctxs[expr_i] if expr_i < len(expr_ctxs) else None
+                yield ("index", None, expr_ctx)
+                expr_i += 1
+                i += 3
+            else:
+                i += 1
+
+    def _normalize_index(self, raw_idx, arr_len):
+        if isinstance(raw_idx, bool):
+            idx = 1 if raw_idx else 0
+        elif isinstance(raw_idx, (int, float)):
+            idx = int(raw_idx)
+        else:
+            raise RuntimeError("El índice del arreglo debe ser numérico.")
+        if idx < 0 or idx >= arr_len:
+            raise RuntimeError(f"Índice fuera de rango: {idx}.")
+        return idx
 
     def _lookup_var(self, name):
         var = self.symbol_table.lookup(name)
@@ -87,45 +122,73 @@ class InterpreterVisitor(CalculadoraVisitor):
         return var
 
     def _read_lvalue(self, lvalue_ctx):
-        parts = self._lvalue_parts(lvalue_ctx)
-        if not parts:
+        if not lvalue_ctx.ID():
             raise RuntimeError("LValue inválido.")
 
-        base = self._lookup_var(parts[0])
+        base_name = lvalue_ctx.ID(0).getText()
+        base = self._lookup_var(base_name)
         current = base["value"]
 
-        for field in parts[1:]:
-            if not isinstance(current, dict):
-                raise RuntimeError(f"'{parts[0]}' no es un struct.")
-            if field not in current:
-                raise RuntimeError(f"Campo '{field}' no existe en struct.")
-            current = current[field]
+        for op_kind, field, expr_ctx in self._iter_lvalue_ops(lvalue_ctx):
+            if op_kind == "field":
+                if not isinstance(current, dict):
+                    raise RuntimeError(f"'{base_name}' no es un struct.")
+                if field not in current:
+                    raise RuntimeError(f"Campo '{field}' no existe en struct.")
+                current = current[field]
+            elif op_kind == "index":
+                if not isinstance(current, list):
+                    raise RuntimeError(f"'{base_name}' no es un arreglo.")
+                idx_val = self.visit(expr_ctx) if expr_ctx else 0
+                idx = self._normalize_index(idx_val, len(current))
+                current = current[idx]
+            else:
+                raise RuntimeError("Operación de lvalue no soportada.")
 
         return current
 
     def _write_lvalue(self, lvalue_ctx, value):
-        parts = self._lvalue_parts(lvalue_ctx)
-        if not parts:
+        if not lvalue_ctx.ID():
             raise RuntimeError("LValue inválido.")
 
-        if len(parts) == 1:
-            self.symbol_table.assign(parts[0], value)
+        base_name = lvalue_ctx.ID(0).getText()
+        ops = list(self._iter_lvalue_ops(lvalue_ctx))
+        if not ops:
+            self.symbol_table.assign(base_name, value)
             return value
 
-        base = self._lookup_var(parts[0])
+        base = self._lookup_var(base_name)
         current = base["value"]
-        if not isinstance(current, dict):
-            raise RuntimeError(f"'{parts[0]}' no es un struct.")
 
-        for field in parts[1:-1]:
-            if field not in current or not isinstance(current[field], dict):
-                raise RuntimeError(f"Campo anidado '{field}' no válido.")
-            current = current[field]
+        for op_kind, field, expr_ctx in ops[:-1]:
+            if op_kind == "field":
+                if not isinstance(current, dict) or field not in current:
+                    raise RuntimeError(f"Campo anidado '{field}' no válido.")
+                current = current[field]
+            elif op_kind == "index":
+                if not isinstance(current, list):
+                    raise RuntimeError(f"'{base_name}' no es un arreglo.")
+                idx_val = self.visit(expr_ctx) if expr_ctx else 0
+                idx = self._normalize_index(idx_val, len(current))
+                current = current[idx]
+            else:
+                raise RuntimeError("Operación de lvalue no soportada.")
 
-        last = parts[-1]
-        if last not in current:
-            raise RuntimeError(f"Campo '{last}' no existe en struct.")
-        current[last] = value
+        last_kind, last_field, last_expr = ops[-1]
+        if last_kind == "field":
+            if not isinstance(current, dict):
+                raise RuntimeError(f"'{base_name}' no es un struct.")
+            if last_field not in current:
+                raise RuntimeError(f"Campo '{last_field}' no existe en struct.")
+            current[last_field] = value
+        elif last_kind == "index":
+            if not isinstance(current, list):
+                raise RuntimeError(f"'{base_name}' no es un arreglo.")
+            idx_val = self.visit(last_expr) if last_expr else 0
+            idx = self._normalize_index(idx_val, len(current))
+            current[idx] = value
+        else:
+            raise RuntimeError("Operación de lvalue no soportada.")
         return value
 
     # ---------------- programa ----------------
@@ -139,11 +202,28 @@ class InterpreterVisitor(CalculadoraVisitor):
         return self.visit(ctx.declaracion())
 
     def visitDeclaracion(self, ctx):
+        # Alternativa 2: TIPO [] ID = [expr, ...]  (arreglo)
+        if ctx.TIPO() and len(ctx.CORCHI()) >= 2:
+            tipo_elem = ctx.TIPO().getText()
+            nombre = ctx.ID(0).getText()
+            valores = []
+            for expr_ctx in ctx.expresion():
+                val = self.visit(expr_ctx)
+                valores.append(self._coerce_to_type(val, tipo_elem))
+            self.symbol_table.declare(nombre, f"array:{tipo_elem}", valores)
+            return valores
+
         # Alternativa 1: TIPO ID (= expr)?
         if ctx.TIPO():
             tipo = ctx.TIPO().getText()
             nombre = ctx.ID(0).getText()
-            valor = self.visit(ctx.expresion()) if ctx.expresion() else self._default_value(tipo)
+            exprs = ctx.expresion()
+            expr_ctx = exprs[0] if exprs else None
+            valor = (
+                self._coerce_to_type(self.visit(expr_ctx), tipo)
+                if expr_ctx
+                else self._default_value(tipo)
+            )
             self.symbol_table.declare(nombre, tipo, valor)
             return valor
 
