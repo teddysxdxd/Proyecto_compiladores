@@ -358,6 +358,12 @@ class SemanticVisitor(CalculadoraVisitor):
     def visitBooleano(self, ctx):
         return "bool"
 
+    def visitParentesis(self, ctx):
+        return self.visit(ctx.expresion())
+
+    def visitCorchetes(self, ctx):
+        return self.visit(ctx.expresion())
+
     def visitCastExplicito(self, ctx):
         destino = ctx.TIPO().getText()
         origen = self.visit(ctx.expresion())
@@ -365,9 +371,12 @@ class SemanticVisitor(CalculadoraVisitor):
         if destino == "void":
             self._add_error(ctx, "No se permite casting explícito a void.")
             return "unknown"
+        if origen is None:
+            self._add_error(ctx, "No se pudo inferir el tipo del valor a convertir.")
+            return "unknown"
         if origen == "unknown":
             return "unknown"
-        if origen.startswith("struct:"):
+        if isinstance(origen, str) and origen.startswith("struct:"):
             self._add_error(ctx, "No se permite casting de structs a tipos primitivos.")
             return "unknown"
         return destino
