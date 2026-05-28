@@ -119,6 +119,23 @@ class IRManualScreen(Screen):
         margin-right: 2;
         width: 1fr;
     }
+    .pass-option {
+        border: solid $accent;
+        background: $panel;
+        padding: 0 1;
+    }
+    .pass-option-selected {
+        border: tall $success;
+        background: $success;
+        color: $text;
+        text-style: bold;
+    }
+    .pass-option-unselected {
+        border: solid $accent;
+        background: $panel;
+        color: $text;
+        text-style: none;
+    }
     #manual-actions {
         margin: 0 0 1 0;
         height: auto;
@@ -131,6 +148,23 @@ class IRManualScreen(Screen):
         margin-right: 2;
         width: auto;
     }
+    .target-option {
+        border: solid $accent;
+        background: $panel;
+        padding: 0 1;
+    }
+    .target-option-selected {
+        border: tall $success;
+        background: $success;
+        color: $text;
+        text-style: bold;
+    }
+    .target-option-unselected {
+        border: tall $error;
+        background: $error;
+        color: $text;
+        text-style: bold;
+    }
     #manual-actions Button {
         margin-right: 1;
         min-width: 18;
@@ -140,6 +174,18 @@ class IRManualScreen(Screen):
         border: solid $primary;
     }
     """
+    PASS_CHECKBOXES = (
+        ("pass-mem2reg", "mem2reg"),
+        ("pass-instcombine", "instcombine"),
+        ("pass-simplifycfg", "simplifycfg"),
+        ("pass-dce", "dce"),
+        ("pass-inline", "inline"),
+        ("pass-loop-unroll", "loop-unroll"),
+    )
+    TARGET_CHECKBOXES = (
+        ("manual-target-linux", "Linux"),
+        ("manual-target-windows", "Windows"),
+    )
 
     def __init__(self, archivo):
         super().__init__()
@@ -158,20 +204,50 @@ class IRManualScreen(Screen):
             Static(f"Fuente: {self.archivo}", id="manual-file"),
             Static("Orden de selección: (ninguno)", id="manual-order-info"),
             Horizontal(
-                Checkbox("mem2reg", id="pass-mem2reg", value=True),
-                Checkbox("instcombine", id="pass-instcombine", value=True),
-                Checkbox("simplifycfg", id="pass-simplifycfg", value=True),
+                Checkbox(
+                    "mem2reg",
+                    id="pass-mem2reg",
+                    value=True,
+                    classes="pass-option pass-option-unselected",
+                ),
+                Checkbox(
+                    "instcombine",
+                    id="pass-instcombine",
+                    value=True,
+                    classes="pass-option pass-option-unselected",
+                ),
+                Checkbox(
+                    "simplifycfg",
+                    id="pass-simplifycfg",
+                    value=True,
+                    classes="pass-option pass-option-unselected",
+                ),
                 id="manual-passes-row1",
             ),
             Horizontal(
-                Checkbox("dce", id="pass-dce", value=False),
-                Checkbox("inline", id="pass-inline", value=False),
-                Checkbox("loop-unroll", id="pass-loop-unroll", value=False),
+                Checkbox("dce", id="pass-dce", value=False, classes="pass-option pass-option-unselected"),
+                Checkbox("inline", id="pass-inline", value=False, classes="pass-option pass-option-unselected"),
+                Checkbox(
+                    "loop-unroll",
+                    id="pass-loop-unroll",
+                    value=False,
+                    classes="pass-option pass-option-unselected",
+                ),
                 id="manual-passes-row2",
             ),
             Horizontal(
-                Checkbox("Linux", id="manual-target-linux", value=True),
-                Checkbox("Windows", id="manual-target-windows", value=False),
+                Checkbox(
+                    "Linux",
+                    id="manual-target-linux",
+                    value=True,
+                    classes="target-option target-option-unselected",
+                ),
+                Checkbox(
+                    "Windows",
+                    id="manual-target-windows",
+                    value=False,
+                    classes="target-option target-option-unselected",
+                ),
                 id="manual-targets",
             ),
             Horizontal(
@@ -199,6 +275,30 @@ class IRManualScreen(Screen):
             self.selection_counter += 1
             self.pass_order[pass_name] = self.selection_counter
         self._actualizar_indicador_orden()
+        self._actualizar_visual_seleccion()
+        self._actualizar_visual_targets()
+
+    def _actualizar_visual_seleccion(self):
+        """Mejora visual: resalta seleccionados y agrega su numero de orden en etiqueta."""
+        orden_por_pass = {
+            pass_name: idx
+            for idx, (pass_name, _) in enumerate(
+                sorted(self.pass_order.items(), key=lambda x: x[1]),
+                start=1,
+            )
+        }
+
+        for checkbox_id, pass_name in self.PASS_CHECKBOXES:
+            checkbox = self.query_one(f"#{checkbox_id}", Checkbox)
+            if checkbox.value:
+                checkbox.add_class("pass-option-selected")
+                checkbox.remove_class("pass-option-unselected")
+                orden = orden_por_pass.get(pass_name)
+                checkbox.label = f"[{orden}] {pass_name}" if orden is not None else f"[ ] {pass_name}"
+            else:
+                checkbox.remove_class("pass-option-selected")
+                checkbox.add_class("pass-option-unselected")
+                checkbox.label = pass_name
 
     def _actualizar_indicador_orden(self):
         """Actualiza el widget que muestra el orden de selección actual."""
@@ -213,8 +313,24 @@ class IRManualScreen(Screen):
         orden_texto = ", ".join(f"{i+1}. {pass_name}" for i, (pass_name, _) in enumerate(passes_ordenados))
         order_widget.update(f"Orden de selección: {orden_texto}")
 
+    def _actualizar_visual_targets(self):
+        for checkbox_id, nombre in self.TARGET_CHECKBOXES:
+            checkbox = self.query_one(f"#{checkbox_id}", Checkbox)
+            if checkbox.value:
+                checkbox.add_class("target-option-selected")
+                checkbox.remove_class("target-option-unselected")
+                checkbox.label = f"ON {nombre}"
+            else:
+                checkbox.remove_class("target-option-selected")
+                checkbox.add_class("target-option-unselected")
+                checkbox.label = f"OFF {nombre}"
+
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
         """Maneja cambios en los checkboxes de passes."""
+        if event.checkbox.id in {"manual-target-linux", "manual-target-windows"}:
+            self._actualizar_visual_targets()
+            return
+
         checkbox_mapping = {
             "pass-mem2reg": "mem2reg",
             "pass-instcombine": "instcombine",
@@ -237,6 +353,7 @@ class IRManualScreen(Screen):
                 del self.pass_order[pass_name]
         
         self._actualizar_indicador_orden()
+        self._actualizar_visual_seleccion()
 
     def _passes_seleccionados(self):
         """Retorna los passes seleccionados en el orden en que fueron seleccionados."""
@@ -389,6 +506,7 @@ class IRManualScreen(Screen):
         self.pass_order.clear()
         self.selection_counter = 0
         self._actualizar_indicador_orden()
+        self._actualizar_visual_seleccion()
         self.output.write("[INFO] Orden de selección limpiado. Reselecciona los passes.")
         self.notify("Orden limpiado", severity="information")
 
@@ -631,6 +749,23 @@ class MenuScreen(Screen):
         margin: 0 2;
         width: auto;
     }
+    .target-option {
+        border: solid $accent;
+        background: $panel;
+        padding: 0 1;
+    }
+    .target-option-selected {
+        border: tall $success;
+        background: $success;
+        color: $text;
+        text-style: bold;
+    }
+    .target-option-unselected {
+        border: tall $error;
+        background: $error;
+        color: $text;
+        text-style: bold;
+    }
 
     #exit-bar {
         text-align: center;
@@ -641,6 +776,11 @@ class MenuScreen(Screen):
         text-style: bold reverse;
     }
     """
+
+    TARGET_CHECKBOXES = (
+        ("target-linux", "Linux"),
+        ("target-windows", "Windows"),
+    )
 
     def __init__(self, seleccionar_archivo_func, pipeline_func):
         super().__init__()
@@ -675,8 +815,8 @@ class MenuScreen(Screen):
                 id="botones",
             ),
             Horizontal(
-                Checkbox("Linux", id="target-linux", value=True),
-                Checkbox("Windows", id="target-windows", value=True),
+                Checkbox("Linux", id="target-linux", value=True, classes="target-option target-option-unselected"),
+                Checkbox("Windows", id="target-windows", value=True, classes="target-option target-option-unselected"),
                 id="targets-row",
             ),
             Static("Presiona Q o Esc para salir", id="exit-bar"),
@@ -686,6 +826,23 @@ class MenuScreen(Screen):
 
     def on_mount(self) -> None:
         self.title = "Compilador Pipeline"
+        self._actualizar_visual_targets()
+
+    def _actualizar_visual_targets(self):
+        for checkbox_id, nombre in self.TARGET_CHECKBOXES:
+            checkbox = self.query_one(f"#{checkbox_id}", Checkbox)
+            if checkbox.value:
+                checkbox.add_class("target-option-selected")
+                checkbox.remove_class("target-option-unselected")
+                checkbox.label = f"ON {nombre}"
+            else:
+                checkbox.remove_class("target-option-selected")
+                checkbox.add_class("target-option-unselected")
+                checkbox.label = f"OFF {nombre}"
+
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        if event.checkbox.id in {"target-linux", "target-windows"}:
+            self._actualizar_visual_targets()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cargar":
