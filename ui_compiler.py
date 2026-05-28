@@ -105,6 +105,12 @@ class IRManualScreen(Screen):
         background: $panel;
         margin-bottom: 1;
     }
+    #manual-order-info {
+        padding: 1;
+        background: $boost;
+        margin-bottom: 1;
+        border: solid $accent;
+    }
     #manual-passes-row1, #manual-passes-row2 {
         margin: 0 0 1 0;
         height: auto;
@@ -141,12 +147,16 @@ class IRManualScreen(Screen):
         self.ir_base = os.path.splitext(archivo)[0] + ".ll"
         self.ir_manual = os.path.splitext(archivo)[0] + ".manual.ll"
         self.ir_actual = self.ir_manual
+        # Rastreador de orden de selección de passes
+        self.pass_order = {}  # {pass_name: order_index}
+        self.selection_counter = 0  # Contador para asignar índice de orden
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Button("Volver al menu", id="volver-manual-btn", variant="primary")
         yield Container(
             Static(f"Fuente: {self.archivo}", id="manual-file"),
+            Static("Orden de selección: (ninguno)", id="manual-order-info"),
             Horizontal(
                 Checkbox("mem2reg", id="pass-mem2reg", value=True),
                 Checkbox("instcombine", id="pass-instcombine", value=True),
@@ -167,6 +177,7 @@ class IRManualScreen(Screen):
             Horizontal(
                 Button("Aplicar Passes", id="manual-aplicar", variant="success"),
                 Button("Re-ejecutar IR", id="manual-ejecutar", variant="primary"),
+                Button("Limpiar Orden", id="manual-limpiar-orden", variant="warning"),
                 id="manual-actions",
             ),
             RichLog(id="manual-output", highlight=True, markup=False, auto_scroll=True),
@@ -178,12 +189,57 @@ class IRManualScreen(Screen):
         self.title = f"IR Manual: {os.path.basename(self.archivo)}"
         self.output = self.query_one("#manual-output", RichLog)
         self.output.write("Panel IR Manual listo.")
-        self.output.write("Selecciona passes y presiona 'Aplicar Passes'.")
+        self.output.write("Selecciona passes en orden y presiona 'Aplicar Passes'.")
         self.output.write(f"IR esperado de entrada: {self.ir_base}")
         if not os.path.exists(self.ir_base):
             self.output.write("[AVISO] Aun no existe .ll. Primero compila el archivo.")
+        
+        # Inicializar orden para checkboxes ya seleccionados (mem2reg, instcombine, simplifycfg)
+        for pass_name in ["mem2reg", "instcombine", "simplifycfg"]:
+            self.selection_counter += 1
+            self.pass_order[pass_name] = self.selection_counter
+        self._actualizar_indicador_orden()
+
+    def _actualizar_indicador_orden(self):
+        """Actualiza el widget que muestra el orden de selección actual."""
+        order_widget = self.query_one("#manual-order-info", Static)
+        
+        if not self.pass_order:
+            order_widget.update("Orden de selección: (ninguno)")
+            return
+        
+        # Ordenar passes por su índice de selección
+        passes_ordenados = sorted(self.pass_order.items(), key=lambda x: x[1])
+        orden_texto = ", ".join(f"{i+1}. {pass_name}" for i, (pass_name, _) in enumerate(passes_ordenados))
+        order_widget.update(f"Orden de selección: {orden_texto}")
+
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        """Maneja cambios en los checkboxes de passes."""
+        checkbox_mapping = {
+            "pass-mem2reg": "mem2reg",
+            "pass-instcombine": "instcombine",
+            "pass-simplifycfg": "simplifycfg",
+            "pass-dce": "dce",
+            "pass-inline": "inline",
+            "pass-loop-unroll": "loop-unroll",
+        }
+        
+        pass_name = checkbox_mapping.get(event.checkbox.id)
+        if not pass_name:
+            return
+        
+        if event.value:  # Checkbox marcado
+            if pass_name not in self.pass_order:
+                self.selection_counter += 1
+                self.pass_order[pass_name] = self.selection_counter
+        else:  # Checkbox desmarcado
+            if pass_name in self.pass_order:
+                del self.pass_order[pass_name]
+        
+        self._actualizar_indicador_orden()
 
     def _passes_seleccionados(self):
+        """Retorna los passes seleccionados en el orden en que fueron seleccionados."""
         mapping = [
             ("pass-mem2reg", "mem2reg"),
             ("pass-instcombine", "instcombine"),
@@ -192,11 +248,16 @@ class IRManualScreen(Screen):
             ("pass-inline", "inline"),
             ("pass-loop-unroll", "loop-unroll"),
         ]
-        seleccionados = []
+        
+        # Obtener passes seleccionados actualmente
+        seleccionados = {}
         for checkbox_id, nombre_pass in mapping:
             if self.query_one(f"#{checkbox_id}", Checkbox).value:
-                seleccionados.append(nombre_pass)
-        return seleccionados
+                seleccionados[nombre_pass] = self.pass_order.get(nombre_pass, float('inf'))
+        
+        # Ordenar por índice de selección
+        passes_ordenados = sorted(seleccionados.items(), key=lambda x: x[1])
+        return [pass_name for pass_name, _ in passes_ordenados]
 
     def _targets_manual_seleccionados(self):
         targets = []
@@ -226,7 +287,9 @@ class IRManualScreen(Screen):
             return
 
         self.output.write("\n=== IR MANUAL: APLICANDO PASSES ===")
-        self.output.write(f"Passes: {', '.join(passes)}")
+        # Mostrar orden de ejecución
+        orden_texto = " → ".join(f"[{i+1}] {p}" for i, p in enumerate(passes))
+        self.output.write(f"Orden de ejecución: {orden_texto}")
 
         try:
             resultado = optimizar_ir_manual_archivo(self.ir_base, self.ir_manual, passes)
@@ -321,6 +384,14 @@ class IRManualScreen(Screen):
         else:
             self.notify("Re-ejecucion completada")
 
+    def _limpiar_orden_seleccion(self):
+        """Limpia el orden de selección y reinicia el contador."""
+        self.pass_order.clear()
+        self.selection_counter = 0
+        self._actualizar_indicador_orden()
+        self.output.write("[INFO] Orden de selección limpiado. Reselecciona los passes.")
+        self.notify("Orden limpiado", severity="information")
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
         if button_id == "volver-manual-btn":
@@ -329,6 +400,8 @@ class IRManualScreen(Screen):
             self._aplicar_passes()
         elif button_id == "manual-ejecutar":
             self._re_ejecutar_ir()
+        elif button_id == "manual-limpiar-orden":
+            self._limpiar_orden_seleccion()
 
 
 class IRDiffScreen(Screen):
