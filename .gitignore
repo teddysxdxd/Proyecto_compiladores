@@ -9,3 +9,9 @@
 /.antlr
 *.dot
 *.png
+*.ll
+*.tac
+*.o
+*.obj
+*.exe
+*_linux.bin

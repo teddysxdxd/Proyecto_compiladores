@@ -1,0 +1,9 @@
+Program
+   int x = 1
+    while (x <= 10) {
+        simon (x % 2 == 0) {
+            print(x)
+        }
+        x = x + 1
+    }
+End_Program

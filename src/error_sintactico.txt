@@ -1,0 +1,6 @@
+Program
+    int x = 5
+    simon x == 5 {
+        print("Debe usar paréntesis en if")
+    }
+End_Program

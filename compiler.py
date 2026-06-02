@@ -6,18 +6,64 @@ from CalculadoraParser import CalculadoraParser
 from CalculadoraVisitor import CalculadoraVisitor
 from antlr4.tree.Trees import Trees
 
+import math
+
+MODULOS = {
+    "math": {
+        "sqrt": math.sqrt,
+        "pow": math.pow,
+        "sin": math.sin,
+        "cos": math.cos
+    }
+}
+
+class BreakSignal(Exception):
+    pass
+
+class ContinueSignal(Exception):
+    pass
+
 
 class EvaluarVisitante(CalculadoraVisitor):
 
     def __init__(self):
         self.memoria = {}
         self.funciones = {}
+        self.imports = set()
 
     # ---------------- PROGRAMA ----------------
     def visitArchivo(self, ctx):
         for inst in ctx.instruccion():
             self.visit(inst)
         return None
+
+    # ---------------- IMPORTS ----------------
+    def visitImportStmt(self, ctx):
+        modulo = ctx.ID().getText()
+        self.imports.add(modulo)
+        print(f"[IMPORT] módulo cargado: {modulo}")
+        return None
+
+    def visitImportStatement(self, ctx):
+        modulo = ctx.ID().getText()
+        self.imports.add(modulo)
+        return None
+
+    def visitLlamadaModulo(self, ctx):
+        modulo = ctx.ID(0).getText()
+        funcion = ctx.ID(1).getText()
+
+        if modulo not in MODULOS and modulo not in self.imports:
+            raise Exception(f"Modulo '{modulo}' no importado")
+
+        if modulo not in MODULOS:
+            raise Exception(f"Modulo '{modulo}' no existe")
+
+        if funcion not in MODULOS[modulo]:
+            raise Exception(f"Funcion '{funcion}' no existe en {modulo}")
+
+        args = [self.visit(e) for e in ctx.expresion()]
+        return MODULOS[modulo][funcion](*args)
 
     # ---------------- INSTRUCCIONES ----------------
     def visitInstruccionExpresion(self, ctx):
@@ -40,6 +86,12 @@ class EvaluarVisitante(CalculadoraVisitor):
 
     def visitInstruccionIf(self, ctx):
         return self.visit(ctx.ifStatement())
+
+    def visitBreakStmt(self, ctx):
+        raise BreakSignal()
+
+    def visitContinueStmt(self, ctx):
+        raise ContinueSignal()
 
     def visitInstruccionWhile(self, ctx):
         return self.visit(ctx.whileStatement())
@@ -100,11 +152,21 @@ class EvaluarVisitante(CalculadoraVisitor):
         return None
 
     # ---------------- WHILE ----------------
+   #  def visitWhileStatement(self, ctx):
+   #      resultado = None
+     #    while float(self.visit(ctx.expresion())) == 1:
+    #         resultado = self.visit(ctx.block())
+     #    return resultado
+
     def visitWhileStatement(self, ctx):
-        resultado = None
-        while float(self.visit(ctx.expresion())) == 1:
-            resultado = self.visit(ctx.block())
-        return resultado
+        while self.visit(ctx.expresion()) == 1:
+            try:
+                self.visit(ctx.block())
+            except ContinueSignal:
+                continue
+            except BreakSignal:
+                break
+        return None
 
     # ---------------- FOR ----------------
     def visitForStatement(self, ctx):
@@ -178,12 +240,15 @@ class EvaluarVisitante(CalculadoraVisitor):
         val = self.visit(ctx.expresion())
         return 1 if val == 0 else 0
 
-    def visitMultiplicacionDivisision(self, ctx):
+    def visitMultiplicacionDivisisionMod(self, ctx):
         izq = self.visit(ctx.expresion(0))
         der = self.visit(ctx.expresion(1))
         if ctx.op.text == '*':
             return izq * der
+        if ctx.op.text == '%':
+            return izq % der if der != 0 else 0
         return izq / der if der != 0 else 0
+        
     def visitSumaResta(self, ctx):
         izq = self.visit(ctx.expresion(0))
         der = self.visit(ctx.expresion(1))
@@ -254,7 +319,16 @@ def guardar_ast_grafico(tree, parser, nombre_archivo="arbol_ast"):
 
 # ---------------- MAIN ----------------
 def main():
-    input_stream = FileStream('operaciones.txt', encoding='utf-8')
+
+    if len(sys.argv) < 2:
+        print("Error: Debes proporcionar un archivo de entrada")
+        return
+
+    archivo = sys.argv[1]
+
+    print(f"Procesando archivo: {archivo}")
+
+    input_stream = FileStream(archivo, encoding='utf-8')
     lexer = CalculadoraLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = CalculadoraParser(stream)
