@@ -26,8 +26,52 @@
 
 ## 🔍 ¿Qué es este proyecto?
 
-Este proyecto implementa un **intérprete / compilador híbrido** para un lenguaje de programación personalizado usando el generador de parsers **ANTLR4** con runtime de Python.
-El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, variables tipadas, estructuras condicionales (`simon` / `sinel`), ciclos, funciones, imports y bloques de código.
+Este proyecto implementa un **intérprete** para un lenguaje de programación personalizado usando el generador de parsers **ANTLR4** con runtime de Python.  
+El lenguaje soporta operaciones matemáticas, comparaciones, lógica booleana, variables, estructuras condicionales (`simon` / `sinel`) y bloques de código.
+
+---
+## 🌳 Visualización del AST
+El proyecto utiliza **Graphviz** para generar una representación visual de la estructura jerárquica del código fuente. Esto facilita la depuración de la gramática y el análisis de la precedencia de operadores.
+
+![AST Example](./arbol_ast.png)
+
+## 🚀 Novedades del Proyecto 2
+
+El proyecto evolucionó a un modelo más cercano a un compilador formal:
+
+### 🔄 Pipeline de Ejecución
+Se implementó un flujo obligatorio de validación:
+
+```
+Léxico → Sintáctico → Semántico → Intérprete
+```
+
+Esto garantiza que el código sea válido antes de ejecutarse.
+
+### 🧠 Análisis Semántico
+- Validación de tipos
+- Verificación de variables declaradas
+- Validación de funciones (parámetros y retorno)
+
+### 🗂️ Manejo de Scopes (Ámbitos)
+- Implementado con **pila de tablas hash (dicts en Python)**
+- Soporta:
+  - Scope global
+  - Scopes locales (funciones y bloques)
+- Acceso eficiente en tiempo **O(1)**
+
+### 🔁 Funciones
+- Declaración con parámetros tipados
+- Retorno obligatorio
+- Soporte para **recursividad**
+
+### ❌ Manejo de Errores
+- Errores léxicos, sintácticos y semánticos
+- Reporte detallado con línea y columna
+- Implementado en `custom_errors.py`
+# Ejemplo de salida ante un error semántico:
+[ERROR SEMÁNTICO] Línea 5:12 - La variable 'resultado' ya ha sido declarada en este ámbito.
+[ERROR DE TIPOS] Línea 8:05 - No se puede sumar 'INT' con 'BOOL'.
 
 ---
 
