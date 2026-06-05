@@ -1,11 +1,13 @@
 import os
+import tempfile
+import glob
 from pathlib import Path
 
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal
 from textual.screen import Screen
-from textual.widgets import Button, Checkbox, Footer, Header, RichLog, Static
+from textual.widgets import Button, Checkbox, Footer, Header, RichLog, Static, TextArea
 
 from ir_manual import (
     construir_diff_paralelo,
@@ -58,11 +60,12 @@ class CompilacionScreen(Screen):
     #compilacion-output { height: 1fr; margin: 1; border: solid $primary; }
     """
 
-    def __init__(self, archivo, pipeline_func, targets_fase8=("linux", "windows")):
+    def __init__(self, archivo, pipeline_func, targets_fase8=("linux", "windows"), on_done=None):
         super().__init__()
         self.archivo = archivo
         self.pipeline_func = pipeline_func
         self.targets_fase8 = tuple(targets_fase8)
+        self.on_done = on_done
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -85,6 +88,8 @@ class CompilacionScreen(Screen):
             targets_fase8=self.targets_fase8,
         )
         self.output.write("\nPIPELINE COMPLETADO")
+        if self.on_done:
+            self.on_done()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "volver-btn":
@@ -193,9 +198,8 @@ class IRManualScreen(Screen):
         self.ir_base = os.path.splitext(archivo)[0] + ".ll"
         self.ir_manual = os.path.splitext(archivo)[0] + ".manual.ll"
         self.ir_actual = self.ir_manual
-        # Rastreador de orden de selección de passes
-        self.pass_order = {}  # {pass_name: order_index}
-        self.selection_counter = 0  # Contador para asignar índice de orden
+        self.pass_order = {}
+        self.selection_counter = 0
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -204,50 +208,20 @@ class IRManualScreen(Screen):
             Static(f"Fuente: {self.archivo}", id="manual-file"),
             Static("Orden de selección: (ninguno)", id="manual-order-info"),
             Horizontal(
-                Checkbox(
-                    "mem2reg",
-                    id="pass-mem2reg",
-                    value=True,
-                    classes="pass-option pass-option-unselected",
-                ),
-                Checkbox(
-                    "instcombine",
-                    id="pass-instcombine",
-                    value=True,
-                    classes="pass-option pass-option-unselected",
-                ),
-                Checkbox(
-                    "simplifycfg",
-                    id="pass-simplifycfg",
-                    value=True,
-                    classes="pass-option pass-option-unselected",
-                ),
+                Checkbox("mem2reg", id="pass-mem2reg", value=True, classes="pass-option pass-option-unselected"),
+                Checkbox("instcombine", id="pass-instcombine", value=True, classes="pass-option pass-option-unselected"),
+                Checkbox("simplifycfg", id="pass-simplifycfg", value=True, classes="pass-option pass-option-unselected"),
                 id="manual-passes-row1",
             ),
             Horizontal(
                 Checkbox("dce", id="pass-dce", value=False, classes="pass-option pass-option-unselected"),
                 Checkbox("inline", id="pass-inline", value=False, classes="pass-option pass-option-unselected"),
-                Checkbox(
-                    "loop-unroll",
-                    id="pass-loop-unroll",
-                    value=False,
-                    classes="pass-option pass-option-unselected",
-                ),
+                Checkbox("loop-unroll", id="pass-loop-unroll", value=False, classes="pass-option pass-option-unselected"),
                 id="manual-passes-row2",
             ),
             Horizontal(
-                Checkbox(
-                    "Linux",
-                    id="manual-target-linux",
-                    value=True,
-                    classes="target-option target-option-unselected",
-                ),
-                Checkbox(
-                    "Windows",
-                    id="manual-target-windows",
-                    value=False,
-                    classes="target-option target-option-unselected",
-                ),
+                Checkbox("Linux", id="manual-target-linux", value=True, classes="target-option target-option-unselected"),
+                Checkbox("Windows", id="manual-target-windows", value=False, classes="target-option target-option-unselected"),
                 id="manual-targets",
             ),
             Horizontal(
@@ -269,8 +243,7 @@ class IRManualScreen(Screen):
         self.output.write(f"IR esperado de entrada: {self.ir_base}")
         if not os.path.exists(self.ir_base):
             self.output.write("[AVISO] Aun no existe .ll. Primero compila el archivo.")
-        
-        # Inicializar orden para checkboxes ya seleccionados (mem2reg, instcombine, simplifycfg)
+
         for pass_name in ["mem2reg", "instcombine", "simplifycfg"]:
             self.selection_counter += 1
             self.pass_order[pass_name] = self.selection_counter
@@ -279,7 +252,6 @@ class IRManualScreen(Screen):
         self._actualizar_visual_targets()
 
     def _actualizar_visual_seleccion(self):
-        """Mejora visual: resalta seleccionados y agrega su numero de orden en etiqueta."""
         orden_por_pass = {
             pass_name: idx
             for idx, (pass_name, _) in enumerate(
@@ -287,7 +259,6 @@ class IRManualScreen(Screen):
                 start=1,
             )
         }
-
         for checkbox_id, pass_name in self.PASS_CHECKBOXES:
             checkbox = self.query_one(f"#{checkbox_id}", Checkbox)
             if checkbox.value:
@@ -301,14 +272,10 @@ class IRManualScreen(Screen):
                 checkbox.label = pass_name
 
     def _actualizar_indicador_orden(self):
-        """Actualiza el widget que muestra el orden de selección actual."""
         order_widget = self.query_one("#manual-order-info", Static)
-        
         if not self.pass_order:
             order_widget.update("Orden de selección: (ninguno)")
             return
-        
-        # Ordenar passes por su índice de selección
         passes_ordenados = sorted(self.pass_order.items(), key=lambda x: x[1])
         orden_texto = ", ".join(f"{i+1}. {pass_name}" for i, (pass_name, _) in enumerate(passes_ordenados))
         order_widget.update(f"Orden de selección: {orden_texto}")
@@ -326,11 +293,9 @@ class IRManualScreen(Screen):
                 checkbox.label = f"OFF {nombre}"
 
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
-        """Maneja cambios en los checkboxes de passes."""
         if event.checkbox.id in {"manual-target-linux", "manual-target-windows"}:
             self._actualizar_visual_targets()
             return
-
         checkbox_mapping = {
             "pass-mem2reg": "mem2reg",
             "pass-instcombine": "instcombine",
@@ -339,24 +304,20 @@ class IRManualScreen(Screen):
             "pass-inline": "inline",
             "pass-loop-unroll": "loop-unroll",
         }
-        
         pass_name = checkbox_mapping.get(event.checkbox.id)
         if not pass_name:
             return
-        
-        if event.value:  # Checkbox marcado
+        if event.value:
             if pass_name not in self.pass_order:
                 self.selection_counter += 1
                 self.pass_order[pass_name] = self.selection_counter
-        else:  # Checkbox desmarcado
+        else:
             if pass_name in self.pass_order:
                 del self.pass_order[pass_name]
-        
         self._actualizar_indicador_orden()
         self._actualizar_visual_seleccion()
 
     def _passes_seleccionados(self):
-        """Retorna los passes seleccionados en el orden en que fueron seleccionados."""
         mapping = [
             ("pass-mem2reg", "mem2reg"),
             ("pass-instcombine", "instcombine"),
@@ -365,14 +326,10 @@ class IRManualScreen(Screen):
             ("pass-inline", "inline"),
             ("pass-loop-unroll", "loop-unroll"),
         ]
-        
-        # Obtener passes seleccionados actualmente
         seleccionados = {}
         for checkbox_id, nombre_pass in mapping:
             if self.query_one(f"#{checkbox_id}", Checkbox).value:
                 seleccionados[nombre_pass] = self.pass_order.get(nombre_pass, float('inf'))
-        
-        # Ordenar por índice de selección
         passes_ordenados = sorted(seleccionados.items(), key=lambda x: x[1])
         return [pass_name for pass_name, _ in passes_ordenados]
 
@@ -396,30 +353,23 @@ class IRManualScreen(Screen):
             self.output.write(f"[ERROR] No existe IR base: {self.ir_base}")
             self.notify("Primero compila para generar .ll", severity="error")
             return
-
         passes = self._passes_seleccionados()
         if not passes:
             self.output.write("[ERROR] No seleccionaste ningun pass.")
             self.notify("Selecciona al menos un pass", severity="warning")
             return
-
         self.output.write("\n=== IR MANUAL: APLICANDO PASSES ===")
-        # Mostrar orden de ejecución
         orden_texto = " → ".join(f"[{i+1}] {p}" for i, p in enumerate(passes))
         self.output.write(f"Orden de ejecución: {orden_texto}")
-
         try:
             resultado = optimizar_ir_manual_archivo(self.ir_base, self.ir_manual, passes)
         except Exception as e:
             self.output.write(f"[ERROR] {e}")
             self.notify("Fallo aplicando passes", severity="error")
             return
-
         self.ir_actual = self.ir_manual
         self.output.write(f"Salida IR manual: {resultado['ruta_ir_salida']}")
-        self.output.write(
-            f"Tiempo optimizacion manual: {self._fmt_ms(resultado.get('tiempo_optimizacion_seg'))}"
-        )
+        self.output.write(f"Tiempo optimizacion manual: {self._fmt_ms(resultado.get('tiempo_optimizacion_seg'))}")
         self.output.write(
             f"Instrucciones: {resultado['instrucciones_antes']} -> "
             f"{resultado['instrucciones_despues']} "
@@ -433,25 +383,21 @@ class IRManualScreen(Screen):
             self.output.write(f"[ERROR] No hay IR para ejecutar: {ruta_ir}")
             self.notify("No hay IR para ejecutar", severity="error")
             return
-
         targets = self._targets_manual_seleccionados()
         if not targets:
             self.output.write("[ERROR] Selecciona al menos una plataforma.")
             self.notify("Selecciona Linux y/o Windows", severity="error")
             return
-
         base_run = os.path.splitext(ruta_ir)[0] + ".manual_run"
         self.output.write("\n=== RE-EJECUCION IR MANUAL ===")
         self.output.write(f"Compilando y ejecutando: {ruta_ir}")
         self.output.write(f"Targets: {', '.join(targets)}")
-
         try:
             resultado = ejecutar_ir_manual_targets(ruta_ir, base_salida=base_run, targets=targets)
         except Exception as e:
             self.output.write(f"[ERROR] {e}")
             self.notify("Fallo en re-ejecucion IR", severity="error")
             return
-
         for target, info in resultado.get("targets", {}).items():
             self.output.write(f"\n--- TARGET {target.upper()} ---")
             if not info.get("ok"):
@@ -459,19 +405,15 @@ class IRManualScreen(Screen):
                 if info.get("stderr"):
                     self.output.write(f"stderr: {info.get('stderr')}")
                 continue
-
             self.output.write(f"Binario generado: {info.get('binary_path')}")
             self.output.write(
                 f"Tiempos: objeto={info.get('tiempo_objeto_ms', 0.0):.2f} ms, "
                 f"enlazado={info.get('tiempo_enlazado_ms', 0.0):.2f} ms, "
                 f"total={info.get('tiempo_total_generacion_ms', 0.0):.2f} ms"
             )
-
             if target == "linux":
                 if info.get("run_ok"):
-                    self.output.write(
-                        f"Ejecucion Linux: {info.get('tiempo_ejecucion_ms', 0.0):.2f} ms"
-                    )
+                    self.output.write(f"Ejecucion Linux: {info.get('tiempo_ejecucion_ms', 0.0):.2f} ms")
                     self.output.write("--- SALIDA PROGRAMA ---")
                     salida = info.get("run_stdout", "")
                     if salida.strip():
@@ -479,7 +421,6 @@ class IRManualScreen(Screen):
                             self.output.write(linea)
                     else:
                         self.output.write("(sin salida)")
-
                     if info.get("run_stderr"):
                         self.output.write("--- STDERR ---")
                         for linea in info["run_stderr"].splitlines():
@@ -489,20 +430,13 @@ class IRManualScreen(Screen):
                     if info.get("run_stderr"):
                         self.output.write(f"stderr: {info.get('run_stderr')}")
             elif target == "windows":
-                self.output.write(
-                    info.get(
-                        "run_note",
-                        "Ejecucion de .exe omitida en este entorno; validar en Windows real.",
-                    )
-                )
-
+                self.output.write(info.get("run_note", "Ejecucion de .exe omitida en este entorno; validar en Windows real."))
         if not resultado.get("ok"):
             self.notify("Re-ejecucion con errores", severity="warning")
         else:
             self.notify("Re-ejecucion completada")
 
     def _limpiar_orden_seleccion(self):
-        """Limpia el orden de selección y reinicia el contador."""
         self.pass_order.clear()
         self.selection_counter = 0
         self._actualizar_indicador_orden()
@@ -608,7 +542,6 @@ class IRDiffScreen(Screen):
             marker = "+"
         elif estado == "eliminada":
             marker = "-"
-
         style = "white"
         if estado == "modificada":
             style = "yellow"
@@ -616,7 +549,6 @@ class IRDiffScreen(Screen):
             style = "green" if lado == "despues" else "dim"
         elif estado == "eliminada":
             style = "red" if lado == "antes" else "dim"
-
         num_txt = f"{numero:>4}" if numero is not None else "    "
         body = texto if texto else "<vacio>"
         linea = Text()
@@ -629,21 +561,12 @@ class IRDiffScreen(Screen):
         self.diff_after.clear()
         self.diff_before.write(Text("IZQUIERDA", style="bold cyan"))
         self.diff_after.write(Text("DERECHA", style="bold cyan"))
-
         filas = diff_paralelo.get("filas", []) if isinstance(diff_paralelo, dict) else []
         resumen = diff_paralelo.get("resumen", {}) if isinstance(diff_paralelo, dict) else {}
-
         for fila in filas:
             estado = fila.get("estado", "igual")
-            self.diff_before.write(
-                self._linea_diff("antes", estado, fila.get("antes_num"), fila.get("antes_texto", ""))
-            )
-            self.diff_after.write(
-                self._linea_diff(
-                    "despues", estado, fila.get("despues_num"), fila.get("despues_texto", "")
-                )
-            )
-
+            self.diff_before.write(self._linea_diff("antes", estado, fila.get("antes_num"), fila.get("antes_texto", "")))
+            self.diff_after.write(self._linea_diff("despues", estado, fila.get("despues_num"), fila.get("despues_texto", "")))
         self.diff_summary.update(
             "Cambios: "
             f"modificadas={resumen.get('modificadas', 0)}  "
@@ -657,26 +580,22 @@ class IRDiffScreen(Screen):
         self.diff_after.clear()
         self.diff_before.write(Text("IZQUIERDA", style="bold cyan"))
         self.diff_after.write(Text("DERECHA", style="bold cyan"))
-
         if not os.path.exists(self.ir_izq):
             self.diff_before.write(Text(f"No existe: {self.ir_izq}", style="red"))
             self.diff_after.write(Text(f"No existe: {self.ir_izq}", style="red"))
             self.diff_summary.update("Error: falta archivo izquierdo")
             self.notify("Falta archivo izquierdo para comparar", severity="error")
             return
-
         if not os.path.exists(self.ir_der):
             self.diff_before.write(Text(f"No existe: {self.ir_der}", style="yellow"))
             self.diff_after.write(Text(f"No existe: {self.ir_der}", style="yellow"))
             self.diff_summary.update("Error: falta archivo derecho")
             self.notify("Falta archivo derecho para comparar", severity="warning")
             return
-
         with open(self.ir_izq, "r", encoding="utf-8") as f:
             ir_izquierda = f.read()
         with open(self.ir_der, "r", encoding="utf-8") as f:
             ir_derecha = f.read()
-
         self._pintar_diff_paralelo(construir_diff_paralelo(ir_izquierda, ir_derecha))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -749,6 +668,7 @@ class MenuScreen(Screen):
         margin: 0 2;
         width: auto;
     }
+
     .target-option {
         border: solid $accent;
         background: $panel;
@@ -765,6 +685,18 @@ class MenuScreen(Screen):
         background: $error;
         color: $text;
         text-style: bold;
+    }
+
+    #editor-codigo {
+    width: 30%;
+    height: 1fr;
+    border: solid $accent;
+    margin: 1;
+    }
+
+    #menu-container {
+        width: 90;
+        height: 1fr;
     }
 
     #exit-bar {
@@ -785,42 +717,46 @@ class MenuScreen(Screen):
     def __init__(self, seleccionar_archivo_func, pipeline_func):
         super().__init__()
         self.archivo_seleccionado = None
+        self.archivo_temporal = None
         self.seleccionar_archivo = seleccionar_archivo_func
         self.run_pipeline = pipeline_func
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Container(
-            Static("[bold]COMPILADOR PIPELINE[/bold]", id="titulo"),
-            Static("Archivo: ninguno", id="file-path"),
-            Static("Selecciona un archivo para continuar", id="estado"),
+        yield Horizontal(
             Container(
-                Horizontal(
-                    Button("Cargar", id="cargar", variant="primary"),
-                    Button("Compilar", id="compilar", variant="success"),
-                    Button("IR Manual", id="ir-manual", variant="warning"),
-                    id="botones-row1",
+                Static("[bold]COMPILADOR PIPELINE[/bold]", id="titulo"),
+                Static("Archivo: ninguno", id="file-path"),
+                Static("Selecciona un archivo para continuar", id="estado"),
+                Container(
+                    Horizontal(
+                        Button("Cargar", id="cargar", variant="primary"),
+                        Button("Compilar", id="compilar", variant="success"),
+                        Button("IR Manual", id="ir-manual", variant="warning"),
+                        id="botones-row1",
+                    ),
+                    Horizontal(
+                        Button("Orig vs Auto", id="diff-orig-auto", variant="primary"),
+                        Button("Orig vs Manual", id="diff-orig-manual", variant="primary"),
+                        Button("Auto vs Manual", id="diff-auto-manual", variant="primary"),
+                        id="botones-row2",
+                    ),
+                    Horizontal(
+                        Button("Limpiar Generados", id="limpiar-generados", variant="warning"),
+                        Button("Limpiar", id="limpiar", variant="error"),
+                        id="botones-row3",
+                    ),
+                    id="botones",
                 ),
                 Horizontal(
-                    Button("Orig vs Auto", id="diff-orig-auto", variant="primary"),
-                    Button("Orig vs Manual", id="diff-orig-manual", variant="primary"),
-                    Button("Auto vs Manual", id="diff-auto-manual", variant="primary"),
-                    id="botones-row2",
+                    Checkbox("Linux", id="target-linux", value=True, classes="target-option target-option-unselected"),
+                    Checkbox("Windows", id="target-windows", value=True, classes="target-option target-option-unselected"),
+                    id="targets-row",
                 ),
-                Horizontal(
-                    Button("Limpiar Generados", id="limpiar-generados", variant="warning"),
-                    Button("Limpiar", id="limpiar", variant="error"),
-                    id="botones-row3",
-                ),
-                id="botones",
+                Static("Presiona Q o Esc para salir", id="exit-bar"),
+                id="menu-container",
             ),
-            Horizontal(
-                Checkbox("Linux", id="target-linux", value=True, classes="target-option target-option-unselected"),
-                Checkbox("Windows", id="target-windows", value=True, classes="target-option target-option-unselected"),
-                id="targets-row",
-            ),
-            Static("Presiona Q o Esc para salir", id="exit-bar"),
-            id="menu-container",
+            TextArea("", id="editor-codigo"),
         )
         yield Footer()
 
@@ -868,9 +804,25 @@ class MenuScreen(Screen):
             self.archivo_seleccionado = archivo
             self.query_one("#file-path", Static).update(f"Archivo: {archivo}")
             self.query_one("#estado", Static).update("[green]Archivo cargado[/]")
+            try:
+                with open(archivo, "r", encoding="utf-8") as f:
+                    contenido = f.read()
+                self.query_one("#editor-codigo", TextArea).load_text(contenido)
+            except Exception as e:
+                self.notify(f"Error leyendo archivo: {e}", severity="error")
             self.notify("Archivo cargado")
         else:
             self.notify("No se selecciono archivo", severity="warning")
+
+    def _limpiar_temporal(self):
+        if self.archivo_temporal and os.path.exists(self.archivo_temporal):
+            base = os.path.splitext(self.archivo_temporal)[0]
+            for f in glob.glob(base + "*"):
+                try:
+                    os.remove(f)
+                except Exception:
+                    pass
+            self.archivo_temporal = None
 
     def compilar(self):
         if not self.archivo_seleccionado:
@@ -889,11 +841,18 @@ class MenuScreen(Screen):
             self.notify("Selecciona Linux y/o Windows", severity="error")
             return
 
+       # Guardar contenido editado directo sobre el archivo original
+        contenido_editor = self.query_one("#editor-codigo", TextArea).text
+        with open(self.archivo_seleccionado, "w", encoding="utf-8") as f:
+            f.write(contenido_editor)
+        self.archivo_temporal = None
+
         self.app.push_screen(
             CompilacionScreen(
                 self.archivo_seleccionado,
                 self.run_pipeline,
                 tuple(targets_fase8),
+                on_done=self._limpiar_temporal,
             )
         )
         self.query_one("#estado", Static).update("[green]Compilacion finalizada[/]")
@@ -903,7 +862,6 @@ class MenuScreen(Screen):
             self.query_one("#estado", Static).update("[red]Selecciona un archivo primero[/]")
             self.notify("Selecciona un archivo primero", severity="error")
             return
-
         self.app.push_screen(IRManualScreen(self.archivo_seleccionado))
 
     def abrir_diff_ir(self, modo):
@@ -911,27 +869,26 @@ class MenuScreen(Screen):
             self.query_one("#estado", Static).update("[red]Selecciona un archivo primero[/]")
             self.notify("Selecciona un archivo primero", severity="error")
             return
-
         self.app.push_screen(IRDiffScreen(self.archivo_seleccionado, modo=modo))
 
     def limpiar(self):
+        self._limpiar_temporal()
         self.archivo_seleccionado = None
         self.query_one("#file-path", Static).update("Archivo: ninguno")
         self.query_one("#estado", Static).update("Selecciona un archivo para continuar")
+        self.query_one("#editor-codigo", TextArea).load_text("")
         self.notify("Limpiado")
 
     def limpiar_generados(self):
         resultado = limpiar_artefactos_generados_src("src")
         borrados = len(resultado.get("deleted", []))
         errores = resultado.get("errors", [])
-
         if errores:
             self.query_one("#estado", Static).update(
                 f"[yellow]Limpieza parcial: {borrados} borrados, {len(errores)} errores[/]"
             )
             self.notify("Limpieza parcial (revisa permisos)", severity="warning")
             return
-
         self.query_one("#estado", Static).update(
             f"[green]Generados limpiados: {borrados} archivos[/]"
         )

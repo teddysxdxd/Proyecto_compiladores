@@ -15,3 +15,8 @@
 *.obj
 *.exe
 *_linux.bin
+
+# Archivos ANTLR del proyecto (excepcion)
+!CalculadoraLexer.py
+!CalculadoraParser.py
+!CalculadoraVisitor.py
