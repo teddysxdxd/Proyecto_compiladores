@@ -1,4 +1,4 @@
-from CalculadoraVisitor import CalculadoraVisitor
+from gramatica_v4Visitor import gramatica_v4Visitor
 from symbol_table import SymbolTable
 
 
@@ -18,7 +18,7 @@ class ReturnSignal(Exception):
         self.value = value
 
 
-class InterpreterVisitor(CalculadoraVisitor):
+class InterpreterVisitor(gramatica_v4Visitor):
     def __init__(self):
         self.symbol_table = SymbolTable()
         self.funciones = {}
