@@ -106,7 +106,7 @@ Proyecto_compiladores/
 │   ├── operaciones.txt
 │   └── ...
 ├── venv/                   # Entorno virtual de Python
-├── Calculadora.g4          # Gramática principal (Lexer + Parser)
+├── gramatica_v4.g4          # Gramática principal (Lexer + Parser)
 ├── compiler.py             # Script principal del compilador
 ├── interpreter_visitor.py  # Lógica del intérprete (Visitor)
 ├── semantic_visitor.py     # Verificación de reglas semánticas
@@ -178,7 +178,7 @@ pip install rich
 ### Paso 4 — Generar el parser desde la gramática
 
 ```bash
-antlr4 -Dlanguage=Python3 -visitor -no-listener Calculadora.g4
+antlr4 -Dlanguage=Python3 -visitor -no-listener gramatica_v4.g4
 ```
 
 Esto genera los archivos `CalculadoraLexer.py`, `CalculadoraParser.py`, etc.
@@ -417,7 +417,7 @@ End_Program
 
 ## 📐 Gramática (resumen)
 
-El lenguaje es definido en `Calculadora.g4`. Su estructura principal:
+El lenguaje es definido en `gramatica_v4.g4`. Su estructura principal:
 
 ```txt
 archivo → importStatement* INICIOPROGRAMA instruccion* FINPROGRAMA
@@ -432,7 +432,7 @@ expresion → número | cadena | booleano | variable | llamadaFuncion | llamadaM
 <summary><strong>Ver gramática completa</strong></summary>
 
 ```antlr
-(Coloca aquí la gramática completa actualizada de Calculadora.g4)
+(Coloca aquí la gramática completa actualizada de gramatica_v4.g4)
 ```
 
 
