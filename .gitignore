@@ -15,8 +15,9 @@
 *.obj
 *.exe
 *_linux.bin
+/pruebas_evidencia
 
 # Archivos ANTLR del proyecto (excepcion)
-!CalculadoraLexer.py
-!CalculadoraParser.py
-!CalculadoraVisitor.py
+!gramatica_v4Lexer.py
+!gramatica_v4Parser.py
+!gramatica_v4Visitor.py

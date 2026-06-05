@@ -1,11 +1,11 @@
-from CalculadoraVisitor import CalculadoraVisitor
+from gramatica_v4Visitor import gramatica_v4Visitor
 from symbol_table import SymbolTable
 
 
 PRIMITIVE_TYPES = {"int", "float", "string", "bool", "void"}
 
 
-class SemanticVisitor(CalculadoraVisitor):
+class SemanticVisitor(gramatica_v4Visitor):
     def __init__(self):
         self.symbol_table = SymbolTable()
         self.errors = []

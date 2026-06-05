@@ -1,9 +1,9 @@
 import sys
 import subprocess
 from antlr4 import *
-from CalculadoraLexer import CalculadoraLexer
-from CalculadoraParser import CalculadoraParser
-from CalculadoraVisitor import CalculadoraVisitor
+from gramatica_v4Lexer import gramatica_v4Lexer
+from gramatica_v4Parser import gramatica_v4Parser
+from gramatica_v4Visitor import gramatica_v4Visitor
 from antlr4.tree.Trees import Trees
 
 import math
@@ -24,7 +24,7 @@ class ContinueSignal(Exception):
     pass
 
 
-class EvaluarVisitante(CalculadoraVisitor):
+class EvaluarVisitante(gramatica_v4Visitor):
 
     def __init__(self):
         self.memoria = {}
@@ -329,9 +329,9 @@ def main():
     print(f"Procesando archivo: {archivo}")
 
     input_stream = FileStream(archivo, encoding='utf-8')
-    lexer = CalculadoraLexer(input_stream)
+    lexer = gramatica_v4Lexer(input_stream)
     stream = CommonTokenStream(lexer)
-    parser = CalculadoraParser(stream)
+    parser = gramatica_v4Parser(stream)
 
     tree = parser.archivo()
 
