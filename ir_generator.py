@@ -1,6 +1,6 @@
 # ir_generator.py
 # Generador de LLVM IR usando llvmlite 0.47+
-# Compatible con Calculadora.g4 rama desarrollo
+# Compatible con gramatica_v4.g4 rama desarrollo
 #
 # Tipos:
 #   int    -> i32
@@ -14,8 +14,8 @@
 #   ejecutable con:   lli archivo.ll
 
 from llvmlite import ir, binding
-from CalculadoraParser import CalculadoraParser
-from CalculadoraVisitor import CalculadoraVisitor
+from gramatica_v4Parser import gramatica_v4Parser
+from gramatica_v4Visitor import gramatica_v4Visitor
 
 
 # ── Tipos base ─────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ class Scope:
 
 
 # ── Generador ─────────────────────────────────────────────────────
-class IRGenerator(CalculadoraVisitor):
+class IRGenerator(gramatica_v4Visitor):
 
     def __init__(self):
         self.module   = ir.Module(name="programa")
@@ -223,7 +223,7 @@ class IRGenerator(CalculadoraVisitor):
                 i += 2
             elif text == "[":
                 expr_ctx = expr_ctxs[expr_i] if expr_i < len(expr_ctxs) else None
-                yield ("index", None, expr_ctx)
+                yield (("index", None, expr_ctx))
                 expr_i += 1
                 i += 3
             else:
@@ -307,7 +307,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── programa raíz ──────────────────────────────────────────────
 
-    def visitArchivo(self, ctx: CalculadoraParser.ArchivoContext):
+    def visitArchivo(self, ctx: gramatica_v4Parser.ArchivoContext):
         # Registrar tipos struct antes de generar cuerpos que los usen
         for inst in ctx.instruccion():
             if hasattr(inst, "structDecl") and inst.structDecl():
@@ -369,7 +369,7 @@ class IRGenerator(CalculadoraVisitor):
     def visitInstruccionBloque(self, ctx):
         self.visit(ctx.block())
 
-    def visitStructDecl(self, ctx: CalculadoraParser.StructDeclContext):
+    def visitStructDecl(self, ctx: gramatica_v4Parser.StructDeclContext):
         sname = ctx.ID().getText()
         if sname in self.struct_types:
             return
@@ -382,7 +382,7 @@ class IRGenerator(CalculadoraVisitor):
             field_meta.append((fname, ftype))
             field_ir_types.append(self._llvm_type_for_name(ftype))
 
-        st = self.module.context.get_identified_type(f"struct.{sname}")
+        st = self.module.context.get_identified_type(f"fstruct.{sname}")
         st.set_body(*field_ir_types)
         self.struct_types[sname] = st
         self.struct_fields[sname] = field_meta
@@ -390,7 +390,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── declaración ───────────────────────────────────────────────
 
-    def visitDeclaracion(self, ctx: CalculadoraParser.DeclaracionContext):
+    def visitDeclaracion(self, ctx: gramatica_v4Parser.DeclaracionContext):
         # TIPO [] ID = [expr, ...]
         if ctx.TIPO() and len(ctx.CORCHI()) >= 2:
             tipo_elem = ctx.TIPO().getText()
@@ -450,7 +450,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── asignación ────────────────────────────────────────────────
 
-    def visitAsignacion(self, ctx: CalculadoraParser.AsignacionContext):
+    def visitAsignacion(self, ctx: gramatica_v4Parser.AsignacionContext):
         lvalue_ctx = ctx.lvalue()
         ops = list(self._iter_lvalue_ops(lvalue_ctx))
         rval = self.visit(ctx.expresion())
@@ -482,7 +482,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── return ────────────────────────────────────────────────────
 
-    def visitReturnStmt(self, ctx: CalculadoraParser.ReturnStmtContext):
+    def visitReturnStmt(self, ctx: gramatica_v4Parser.ReturnStmtContext):
         if self.builder.block.is_terminated:
             return
 
@@ -502,7 +502,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── declaración de función ────────────────────────────────────
 
-    def visitFuncionDecl(self, ctx: CalculadoraParser.FuncionDeclContext):
+    def visitFuncionDecl(self, ctx: gramatica_v4Parser.FuncionDeclContext):
         ret_tipo = ctx.TIPO().getText()
         name     = ctx.ID().getText()
 
@@ -557,7 +557,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── bloque ────────────────────────────────────────────────────
 
-    def visitBlock(self, ctx: CalculadoraParser.BlockContext):
+    def visitBlock(self, ctx: gramatica_v4Parser.BlockContext):
         self.scope = Scope(parent=self.scope)
         for inst in ctx.instruccion():
             if self.builder.block.is_terminated:
@@ -567,7 +567,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── if / if-else ──────────────────────────────────────────────
 
-    def visitIfStatement(self, ctx: CalculadoraParser.IfStatementContext):
+    def visitIfStatement(self, ctx: gramatica_v4Parser.IfStatementContext):
         cond   = self._coerce(self.visit(ctx.expresion()), BOOL)
         fn     = self.builder.function
         blocks = ctx.block()
@@ -591,7 +591,7 @@ class IRGenerator(CalculadoraVisitor):
 
         self.builder.position_at_end(merge_bb)
 
-    def visitSwitchStatement(self, ctx: CalculadoraParser.SwitchStatementContext):
+    def visitSwitchStatement(self, ctx: gramatica_v4Parser.SwitchStatementContext):
         fn = self.builder.function
         control = self.visit(ctx.expresion())
 
@@ -647,7 +647,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── while ─────────────────────────────────────────────────────
 
-    def visitWhileStatement(self, ctx: CalculadoraParser.WhileStatementContext):
+    def visitWhileStatement(self, ctx: gramatica_v4Parser.WhileStatementContext):
         fn = self.builder.function
         cond_bb = fn.append_basic_block("while_cond")
         body_bb = fn.append_basic_block("while_body")
@@ -674,7 +674,7 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── for ───────────────────────────────────────────────────────
 
-    def visitForStatement(self, ctx: CalculadoraParser.ForStatementContext):
+    def visitForStatement(self, ctx: gramatica_v4Parser.ForStatementContext):
         asigs = ctx.asignacion()
         fn    = self.builder.function
 
@@ -707,6 +707,8 @@ class IRGenerator(CalculadoraVisitor):
 
         self.builder.position_at_end(end_bb)
 
+    # ── other methods continue, unchanged
+
     def visitBreakStmt(self, ctx):
         if not self.break_targets:
             return
@@ -721,21 +723,21 @@ class IRGenerator(CalculadoraVisitor):
 
     # ── expresiones ───────────────────────────────────────────────
 
-    def visitNumero(self, ctx: CalculadoraParser.NumeroContext):
+    def visitNumero(self, ctx: gramatica_v4Parser.NumeroContext):
         txt = ctx.NUMERO().getText()
         if "." in txt:
             return ir.Constant(FLOAT, float(txt))
         return ir.Constant(INT, int(txt))
 
-    def visitCadena(self, ctx: CalculadoraParser.CadenaContext):
+    def visitCadena(self, ctx: gramatica_v4Parser.CadenaContext):
         raw  = ctx.STRING().getText()[1:-1]       # quitar comillas
         gvar = self._global_str(raw)
         return self._str_ptr(gvar)
 
-    def visitBooleano(self, ctx: CalculadoraParser.BooleanoContext):
+    def visitBooleano(self, ctx: gramatica_v4Parser.BooleanoContext):
         return ir.Constant(BOOL, 1 if ctx.BOOLEANO().getText() == "true" else 0)
 
-    def visitVariable(self, ctx: CalculadoraParser.VariableContext):
+    def visitVariable(self, ctx: gramatica_v4Parser.VariableContext):
         ptr, tipo_str = self._resolve_lvalue_ptr_and_type(ctx.lvalue())
         if ptr is None:
             return ir.Constant(INT, 0)
@@ -743,18 +745,18 @@ class IRGenerator(CalculadoraVisitor):
             return ir.Constant(INT, 0)
         return self.builder.load(ptr)
 
-    def visitParentesis(self, ctx: CalculadoraParser.ParentesisContext):
+    def visitParentesis(self, ctx: gramatica_v4Parser.ParentesisContext):
         return self.visit(ctx.expresion())
 
-    def visitCorchetes(self, ctx: CalculadoraParser.CorchetesContext):
+    def visitCorchetes(self, ctx: gramatica_v4Parser.CorchetesContext):
         return self.visit(ctx.expresion())
 
-    def visitCastExplicito(self, ctx: CalculadoraParser.CastExplicitoContext):
+    def visitCastExplicito(self, ctx: gramatica_v4Parser.CastExplicitoContext):
         val = self.visit(ctx.expresion())
         target = self._llvm_type_for_name(ctx.TIPO().getText())
         return self._coerce(val, target)
 
-    def visitNotLogico(self, ctx: CalculadoraParser.NotLogicoContext):
+    def visitNotLogico(self, ctx: gramatica_v4Parser.NotLogicoContext):
         val = self._coerce(self.visit(ctx.expresion()), BOOL)
         return self.builder.not_(val)
 
@@ -804,19 +806,19 @@ class IRGenerator(CalculadoraVisitor):
         right = self._coerce(right, INT)
         return self.builder.icmp_signed(op, left, right)
 
-    def visitMultiplicacionDivisisionMod(self, ctx: CalculadoraParser.MultiplicacionDivisisionModContext):
+    def visitMultiplicacionDivisisionMod(self, ctx: gramatica_v4Parser.MultiplicacionDivisisionModContext):
         return self._arith(self.visit(ctx.expresion(0)),
                            self.visit(ctx.expresion(1)), ctx.op.text)
 
-    def visitSumaResta(self, ctx: CalculadoraParser.SumaRestaContext):
+    def visitSumaResta(self, ctx: gramatica_v4Parser.SumaRestaContext):
         return self._arith(self.visit(ctx.expresion(0)),
                            self.visit(ctx.expresion(1)), ctx.op.text)
 
-    def visitRelacional(self, ctx: CalculadoraParser.RelacionalContext):
+    def visitRelacional(self, ctx: gramatica_v4Parser.RelacionalContext):
         return self._cmp(self.visit(ctx.expresion(0)),
                          self.visit(ctx.expresion(1)), ctx.op.text)
 
-    def visitAndOrLogico(self, ctx: CalculadoraParser.AndOrLogicoContext):
+    def visitAndOrLogico(self, ctx: gramatica_v4Parser.AndOrLogicoContext):
         left  = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
         if left is None:
@@ -829,7 +831,7 @@ class IRGenerator(CalculadoraVisitor):
             return self.builder.and_(left, right)
         return self.builder.or_(left, right)
 
-    def visitTernario(self, ctx: CalculadoraParser.TernarioContext):
+    def visitTernario(self, ctx: gramatica_v4Parser.TernarioContext):
         cond = self._coerce(self.visit(ctx.expresion(0)), BOOL)
         true_val = self.visit(ctx.expresion(1))
         false_val = self.visit(ctx.expresion(2))
@@ -865,7 +867,7 @@ class IRGenerator(CalculadoraVisitor):
         phi.add_incoming(false_val, else_bb)
         return phi
 
-    def visitLlamadaFuncion(self, ctx: CalculadoraParser.LlamadaFuncionContext):
+    def visitLlamadaFuncion(self, ctx: gramatica_v4Parser.LlamadaFuncionContext):
         name = ctx.ID().getText()
         if name not in self.functions:
             return ir.Constant(INT, 0)
@@ -887,7 +889,7 @@ class IRGenerator(CalculadoraVisitor):
             return ir.Constant(INT, 0)
         return result if result is not None else ir.Constant(INT, 0)
 
-    def visitLlamadaModulo(self, ctx: CalculadoraParser.LlamadaModuloContext):
+    def visitLlamadaModulo(self, ctx: gramatica_v4Parser.LlamadaModuloContext):
         modulo = ctx.ID(0).getText()
         funcion = ctx.ID(1).getText()
         

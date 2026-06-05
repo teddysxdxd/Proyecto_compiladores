@@ -122,7 +122,7 @@ Proyecto_compiladores/
 ```
 
 > ⚙️ Al ejecutar `antlr4`, se generan automáticamente los siguientes archivos (no subir al repo):
-> `CalculadoraLexer.py`, `CalculadoraParser.py`, `CalculadoraVisitor.py`, `CalculadoraListener.py`, `operaciones.ll`, `operaciones.tac`
+> `gramatica_v4Lexer.py`, `gramatica_v4Parser.py`, `gramatica_v4Visitor.py`, `gramatica_v4Listener.py`, `operaciones.ll`, `operaciones.tac`
 
 ---
 
@@ -181,7 +181,7 @@ pip install rich
 antlr4 -Dlanguage=Python3 -visitor -no-listener gramatica_v4.g4
 ```
 
-Esto genera los archivos `CalculadoraLexer.py`, `CalculadoraParser.py`, etc.
+Esto genera los archivos `gramatica_v4Lexer.py`, `gramatica_v4Parser.py`, etc.
 
 ## Paso 5 - Instalar dependencias de Graphviz
 

@@ -6,8 +6,8 @@ from contextlib import contextmanager
 
 from antlr4 import *
 from antlr4.tree.Trees import Trees
-from CalculadoraLexer import CalculadoraLexer
-from CalculadoraParser import CalculadoraParser
+from gramatica_v4Lexer import gramatica_v4Lexer
+from gramatica_v4Parser import gramatica_v4Parser
 from custom_errors import MyErrorListener, LexerErrorListener
 from semantic_visitor import SemanticVisitor
 from interpreter_visitor import InterpreterVisitor
@@ -80,14 +80,14 @@ def run_pipeline(archivo_entrada, targets_fase8=("linux", "windows")):
         # 1. Fase Léxica
         with medir_fase("Fase Léxica", metricas):
             input_stream = FileStream(archivo_entrada, encoding='utf-8')
-            lexer = CalculadoraLexer(input_stream)
+            lexer = gramatica_v4Lexer(input_stream)
             lexer.removeErrorListeners()
             lexer.addErrorListener(LexerErrorListener())
 
         # 2. Fase Sintáctica
         with medir_fase("Fase Sintáctica", metricas):
             stream = CommonTokenStream(lexer)
-            parser = CalculadoraParser(stream)
+            parser = gramatica_v4Parser(stream)
             parser.removeErrorListeners()
 
             error_sintactico = MyErrorListener()

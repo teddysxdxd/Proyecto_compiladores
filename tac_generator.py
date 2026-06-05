@@ -1,11 +1,11 @@
 # tac_generator.py
 # Generador de Código de Tres Direcciones (TAC)
 
-from CalculadoraParser import CalculadoraParser
-from CalculadoraVisitor import CalculadoraVisitor
+from gramatica_v4Parser import gramatica_v4Parser
+from gramatica_v4Visitor import gramatica_v4Visitor
 
 
-class TACGenerator(CalculadoraVisitor):
+class TACGenerator(gramatica_v4Visitor):
     def __init__(self):
         self.instructions = []
         self._temp_count = 0
@@ -65,7 +65,7 @@ class TACGenerator(CalculadoraVisitor):
         print(f"[TAC] Generado: {path}  ({len(self.instructions)} instrucciones)")
 
     # ---------------- raíz ----------------
-    def visitArchivo(self, ctx: CalculadoraParser.ArchivoContext):
+    def visitArchivo(self, ctx: gramatica_v4Parser.ArchivoContext):
         self._emit("; ===== TAC  —  inicio de programa =====")
         self.visitChildren(ctx)
         self._emit("; ===== TAC  —  fin de programa   =====")
@@ -109,7 +109,7 @@ class TACGenerator(CalculadoraVisitor):
         return self.visit(ctx.block())
 
     # ---------------- structs ----------------
-    def visitStructDecl(self, ctx: CalculadoraParser.StructDeclContext):
+    def visitStructDecl(self, ctx: gramatica_v4Parser.StructDeclContext):
         name = ctx.ID().getText()
         fields = []
         for fctx in ctx.structFieldDecl():
@@ -123,7 +123,7 @@ class TACGenerator(CalculadoraVisitor):
         return None
 
     # ---------------- declaraciones ----------------
-    def visitDeclaracion(self, ctx: CalculadoraParser.DeclaracionContext):
+    def visitDeclaracion(self, ctx: gramatica_v4Parser.DeclaracionContext):
         # TIPO [] ID = [expr, ...]
         if ctx.TIPO() and len(ctx.CORCHI()) >= 2:
             tipo = ctx.TIPO().getText()
@@ -146,7 +146,7 @@ class TACGenerator(CalculadoraVisitor):
                 defaults = {
                     "int": "0",
                     "float": "0.0",
-                    "string": '""',
+                    "string": '\"\"',
                     "bool": "false",
                     "void": "0",
                 }
@@ -163,20 +163,20 @@ class TACGenerator(CalculadoraVisitor):
             defaults = {
                 "int": "0",
                 "float": "0.0",
-                "string": '""',
+                "string": '\"\"',
                 "bool": "false",
             }
             self._emit(f"{var_name}.{fname} = {defaults.get(ftype, '0')}")
         return None
 
     # ---------------- asignación ----------------
-    def visitAsignacion(self, ctx: CalculadoraParser.AsignacionContext):
+    def visitAsignacion(self, ctx: gramatica_v4Parser.AsignacionContext):
         left = self._lvalue_text(ctx.lvalue())
         val = self.visit(ctx.expresion())
         self._emit(f"{left} = {val}")
         return left
 
-    def visitReturnStmt(self, ctx: CalculadoraParser.ReturnStmtContext):
+    def visitReturnStmt(self, ctx: gramatica_v4Parser.ReturnStmtContext):
         if ctx.expresion():
             val = self.visit(ctx.expresion())
             self._emit(f"return {val}")
@@ -184,7 +184,7 @@ class TACGenerator(CalculadoraVisitor):
             self._emit("return")
 
     # ---------------- función ----------------
-    def visitFuncionDecl(self, ctx: CalculadoraParser.FuncionDeclContext):
+    def visitFuncionDecl(self, ctx: gramatica_v4Parser.FuncionDeclContext):
         name = ctx.ID().getText()
         ret_type = ctx.TIPO().getText()
         self._emit("")
@@ -202,11 +202,11 @@ class TACGenerator(CalculadoraVisitor):
         self._emit(f"end_func {name}")
         self._emit("")
 
-    def visitBlock(self, ctx: CalculadoraParser.BlockContext):
+    def visitBlock(self, ctx: gramatica_v4Parser.BlockContext):
         self.visitChildren(ctx)
 
     # ---------------- if / switch / while / for ----------------
-    def visitIfStatement(self, ctx: CalculadoraParser.IfStatementContext):
+    def visitIfStatement(self, ctx: gramatica_v4Parser.IfStatementContext):
         cond = self.visit(ctx.expresion())
         blocks = ctx.block()
 
@@ -225,7 +225,7 @@ class TACGenerator(CalculadoraVisitor):
             self.visit(blocks[1])
             self._emit(f"{l_end}:")
 
-    def visitSwitchStatement(self, ctx: CalculadoraParser.SwitchStatementContext):
+    def visitSwitchStatement(self, ctx: gramatica_v4Parser.SwitchStatementContext):
         ctrl = self.visit(ctx.expresion())
         l_end = self._new_label()
         next_case_label = self._new_label()
@@ -251,7 +251,7 @@ class TACGenerator(CalculadoraVisitor):
 
         self._emit(f"{l_end}:")
 
-    def visitWhileStatement(self, ctx: CalculadoraParser.WhileStatementContext):
+    def visitWhileStatement(self, ctx: gramatica_v4Parser.WhileStatementContext):
         l_start = self._new_label()
         l_end = self._new_label()
         self._emit(f"{l_start}:")
@@ -261,7 +261,7 @@ class TACGenerator(CalculadoraVisitor):
         self._emit(f"goto {l_start}")
         self._emit(f"{l_end}:")
 
-    def visitForStatement(self, ctx: CalculadoraParser.ForStatementContext):
+    def visitForStatement(self, ctx: gramatica_v4Parser.ForStatementContext):
         asigs = ctx.asignacion()
         l_start = self._new_label()
         l_end = self._new_label()
@@ -276,66 +276,66 @@ class TACGenerator(CalculadoraVisitor):
         self._emit(f"{l_end}:")
 
     # ---------------- expresiones ----------------
-    def visitNumero(self, ctx: CalculadoraParser.NumeroContext):
+    def visitNumero(self, ctx: gramatica_v4Parser.NumeroContext):
         return ctx.NUMERO().getText()
 
-    def visitCadena(self, ctx: CalculadoraParser.CadenaContext):
+    def visitCadena(self, ctx: gramatica_v4Parser.CadenaContext):
         return ctx.STRING().getText()
 
-    def visitBooleano(self, ctx: CalculadoraParser.BooleanoContext):
+    def visitBooleano(self, ctx: gramatica_v4Parser.BooleanoContext):
         return ctx.BOOLEANO().getText()
 
-    def visitVariable(self, ctx: CalculadoraParser.VariableContext):
+    def visitVariable(self, ctx: gramatica_v4Parser.VariableContext):
         return self._lvalue_text(ctx.lvalue())
 
-    def visitParentesis(self, ctx: CalculadoraParser.ParentesisContext):
+    def visitParentesis(self, ctx: gramatica_v4Parser.ParentesisContext):
         return self.visit(ctx.expresion())
 
-    def visitCorchetes(self, ctx: CalculadoraParser.CorchetesContext):
+    def visitCorchetes(self, ctx: gramatica_v4Parser.CorchetesContext):
         return self.visit(ctx.expresion())
 
-    def visitCastExplicito(self, ctx: CalculadoraParser.CastExplicitoContext):
+    def visitCastExplicito(self, ctx: gramatica_v4Parser.CastExplicitoContext):
         val = self.visit(ctx.expresion())
         dst = ctx.TIPO().getText()
         tmp = self._new_temp()
         self._emit(f"{tmp} = ({dst}) {val}")
         return tmp
 
-    def visitNotLogico(self, ctx: CalculadoraParser.NotLogicoContext):
+    def visitNotLogico(self, ctx: gramatica_v4Parser.NotLogicoContext):
         operand = self.visit(ctx.expresion())
         tmp = self._new_temp()
         self._emit(f"{tmp} = !{operand}")
         return tmp
 
-    def visitMultiplicacionDivisisionMod(self, ctx: CalculadoraParser.MultiplicacionDivisisionModContext):
+    def visitMultiplicacionDivisisionMod(self, ctx: gramatica_v4Parser.MultiplicacionDivisisionModContext):
         left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
         tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
-    def visitSumaResta(self, ctx: CalculadoraParser.SumaRestaContext):
+    def visitSumaResta(self, ctx: gramatica_v4Parser.SumaRestaContext):
         left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
         tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
-    def visitRelacional(self, ctx: CalculadoraParser.RelacionalContext):
+    def visitRelacional(self, ctx: gramatica_v4Parser.RelacionalContext):
         left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
         tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
-    def visitAndOrLogico(self, ctx: CalculadoraParser.AndOrLogicoContext):
+    def visitAndOrLogico(self, ctx: gramatica_v4Parser.AndOrLogicoContext):
         left = self.visit(ctx.expresion(0))
         right = self.visit(ctx.expresion(1))
         tmp = self._new_temp()
         self._emit(f"{tmp} = {left} {ctx.op.text} {right}")
         return tmp
 
-    def visitTernario(self, ctx: CalculadoraParser.TernarioContext):
+    def visitTernario(self, ctx: gramatica_v4Parser.TernarioContext):
         cond = self.visit(ctx.expresion(0))
         l_false = self._new_label()
         l_end = self._new_label()
@@ -352,7 +352,7 @@ class TACGenerator(CalculadoraVisitor):
         return tmp
 
     # ---------------- llamadas ----------------
-    def visitLlamadaFuncion(self, ctx: CalculadoraParser.LlamadaFuncionContext):
+    def visitLlamadaFuncion(self, ctx: gramatica_v4Parser.LlamadaFuncionContext):
         name = ctx.ID().getText()
         args = []
         if ctx.args():
