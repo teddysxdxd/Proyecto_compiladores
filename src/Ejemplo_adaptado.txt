@@ -1,0 +1,22 @@
+Program
+    int fibonacci(int n) {
+        simon (n <= 1) {
+            return n
+        }
+        int a = 0
+        int b = 1
+        int temp = 0
+        int i = 2
+        
+        while (i <= n) {
+            temp = a + b
+            a = b
+            b = temp
+            i = i + 1
+        }
+        return b
+    }
+    
+    print("Fibonacci(15) = ")
+    print(fibonacci(15))
+End_Program

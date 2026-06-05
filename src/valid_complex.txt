@@ -1,0 +1,28 @@
+import math
+
+Program
+    int a = 10
+    float b = 3.5
+    string mensaje = "Resultado de factorial y raíz"
+
+    int factorial(int n) {
+        int resultado = 1
+        while (n > 1) {
+            resultado = resultado * n
+            n = n - 1
+        }
+        return resultado
+    }
+
+    int valorFactorial = factorial(5)
+    float raiz = math.sqrt(16)
+
+    simon (valorFactorial > 100) {
+        print(mensaje)
+    } sinel {
+        print("Factorial menor o igual a 100")
+    }
+
+    print(valorFactorial)
+    print(raiz)
+End_Program

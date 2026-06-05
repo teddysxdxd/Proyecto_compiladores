@@ -1,0 +1,4 @@
+Program
+    int x = "hola"
+    print(x)
+End_Program

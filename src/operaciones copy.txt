@@ -1,0 +1,21 @@
+Program
+    int x = 10
+    string prefijo = "El resultado es: "
+
+    int factorial(int n) {
+        simon (n <= 1) {
+            return 1
+        } sinel {
+            return n * factorial(n - 1)
+        }
+    }
+
+    while (x > 0) {
+        int temp = factorial(x)
+        print(prefijo)
+        print(temp)
+        x = x - 2
+    }
+
+    print ("hola")
+End_Program

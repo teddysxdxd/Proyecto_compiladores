@@ -1,0 +1,22 @@
+/venv
+/__pycache__
+*.interp
+*.tokens
+*Listener.py
+*Parser.py
+*Visitor.py
+*Lexer.py
+/.antlr
+*.dot
+*.png
+*.ll
+*.tac
+*.o
+*.obj
+*.exe
+*_linux.bin
+
+# Archivos ANTLR del proyecto (excepcion)
+!CalculadoraLexer.py
+!CalculadoraParser.py
+!CalculadoraVisitor.py

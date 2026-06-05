@@ -1,0 +1,25 @@
+Program
+    struct Punto {
+        int x
+        int y
+    }
+
+    Punto p
+    p.x = 10
+    p.y = (int) 2.9
+
+    int maximo = p.x > p.y ? p.x : p.y
+
+    switch (maximo) {
+        case 8:
+            print("ocho")
+            break
+        case 10:
+            print("diez")
+            break
+        default:
+            print("otro valor")
+    }
+
+    print(maximo)
+End_Program

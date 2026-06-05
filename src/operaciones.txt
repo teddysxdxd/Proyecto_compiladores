@@ -1,0 +1,66 @@
+Program
+
+int x = 5
+float y = 2.5
+string mensaje = "Hola mundo"
+bool activo = true
+bool bandera = false
+int a = 99
+
+float floatfn() {
+    return 3.1416
+}
+
+int suma(int a, int b) {
+    return a + b
+}
+
+int doble(int n) {
+    return n * 2
+}
+
+bool esMayor(int a, int b) {
+    return a > b
+}
+
+void saludar() {
+    print("hola soy una funcion void")
+}
+
+void saludar2() {
+    return "hola soy una funcion void con return"
+}
+
+x = suma(x, 3)
+print(a)
+y = y / 2
+print(x)
+print(mensaje)
+print([x + 1])
+
+simon (x > 5 && activo) {
+    print("x es mayor que 5 y activo es true")
+} sinel {
+    print("No se cumplio la condicion")
+}
+
+simon (!bandera || x == 8) {
+    print("Prueba de operador logico NOT y OR")
+}
+
+while (x < 12) {
+    x = x + 1
+    print(x)
+}
+
+for (x = 0; x < 3; x = x + 1) {
+    print(x)
+}
+
+suma(10, 20)
+doble(4)
+esMayor(7, 2)
+saludar()
+print(saludar2())
+print(floatfn())
+End_Program
