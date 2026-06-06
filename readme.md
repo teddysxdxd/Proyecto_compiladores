@@ -173,6 +173,7 @@ pip install antlr4-python3-runtime
 pip install llvmlite
 pip install textual
 pip install rich
+sudo apt install mingw-w64
 ```
 
 ### Paso 4 — Generar el parser desde la gramática
